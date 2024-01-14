@@ -94,7 +94,8 @@ def findFraction(n: float) -> tuple[int, int]:
             if distanceFromInt < tolerance or (1 - distanceFromInt) < tolerance:
                 if np.abs((numer / denom) - p) < tolerance:
                     if n < 0:
-                        return numer * -1, denom * -1    
+                        # If input was negative, negate the numerator
+                        return numer * -1, denom  
                     return numer, denom
     return 0, 0
 
@@ -110,11 +111,13 @@ def prettyWaveFunctionAmplitude(n) -> str:
     if numerator / denominator < tolerance:
         return "0"
     if numerator / denominator > (1 - tolerance) and numerator / denominator < (1 + tolerance):
+        if n < 0:
+            return "-1"
         return "1"
     
     numeratorIsRootable = False
     denominatorIsRootable = False
-    if np.sqrt(numerator) % 1 < tolerance or ( 1 - (np.sqrt(numerator) % 1)) < tolerance:
+    if np.sqrt(np.abs(numerator)) % 1 < tolerance or ( 1 - (np.sqrt(np.abs(numerator)) % 1)) < tolerance:
         numeratorIsRootable = True
     if np.sqrt(denominator) % 1 < tolerance or ( 1 - (np.sqrt(denominator) % 1)) < tolerance:
         denominatorIsRootable = True
@@ -122,9 +125,21 @@ def prettyWaveFunctionAmplitude(n) -> str:
     numeratorString = str(int(np.sqrt(numerator))) if numeratorIsRootable else sqrtSymbol + str(int(numerator))
     denominatorString = str(int(np.sqrt(denominator))) if denominatorIsRootable else sqrtSymbol + str(int(denominator))
 
+    if n < 0:
+        numeratorString = "-" + numeratorString
+
     return numeratorString + "/" + denominatorString
 
 vPrettyWaveFunctionAmplitude = np.vectorize(prettyWaveFunctionAmplitude)
+
+def makeControlGate(gate, controlPosition):
+    zeroState = np.outer(buildKet("|0>"), buildBra("<0|"))
+    oneState = np.outer(buildKet("|1>"), buildBra("<1|"))
+
+    if controlPosition == 0:
+        return np.kron(zeroState, np.eye(2)) + np.kron(oneState, gate)
+    elif controlPosition == 1:
+        return np.kron(np.kron(oneState, np.eye(2)) + np.kron(zeroState, gate))
 
 
 
@@ -173,6 +188,9 @@ class TestQuantumHelpers(unittest.TestCase):
         self.assertEqual((7,8), findFraction(7/8))
         self.assertEqual((1,1), findFraction(8/8))
 
+        # Make sure negatives are supported
+        self.assertEqual((-1, 2), findFraction(-1/2))
+
     def test_printPrettyWaveFunctionAmplitude(self):
         sqrtSymbol = "\u221A"
         self.assertEqual("1", prettyWaveFunctionAmplitude(1))
@@ -181,6 +199,21 @@ class TestQuantumHelpers(unittest.TestCase):
         self.assertEqual("1/2", prettyWaveFunctionAmplitude(1/2))
         self.assertEqual("{s}3/2".format(s=sqrtSymbol), prettyWaveFunctionAmplitude(np.sqrt(3)/2))
         self.assertEqual("{s}7/{s}8".format(s=sqrtSymbol), prettyWaveFunctionAmplitude(np.sqrt(7)/np.sqrt(8)))
+
+        #Make sure negatives are supported
+        self.assertEqual("-1/{s}2".format(s=sqrtSymbol), prettyWaveFunctionAmplitude(-1/np.sqrt(2)))
+
+    def test_makeControlGate(self):
+        self.compareMatricies(cNOT, makeControlGate(pauli_X, 0))
+
+    def compareMatricies(self, a, b):
+        if(a.shape != b.shape):
+            self.fail("Shapes do not match. " + str(a.shape) + " != " + str(b.shape))
+        for row in range(a.shape[0]):
+            for col in range(a.shape[1]):
+                self.assertEqual(a[row][col], b[row][col])
+
+        
 
 
 
