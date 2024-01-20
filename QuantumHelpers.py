@@ -106,7 +106,7 @@ def prettyWaveFunctionAmplitude(n) -> str:
     numerator, denominator = findFraction(n * np.conj(n))
     
     # If a fraction for the number cannot be found
-    if numerator == 0:
+    if denominator == 0:
         return str(n)
     if numerator / denominator < tolerance:
         return "0"
@@ -128,9 +128,33 @@ def prettyWaveFunctionAmplitude(n) -> str:
     if n < 0:
         numeratorString = "-" + numeratorString
 
-    return numeratorString + "/" + denominatorString
+    return "{n}/{d}".format(n=numeratorString, d=denominatorString)
 
 vPrettyWaveFunctionAmplitude = np.vectorize(prettyWaveFunctionAmplitude)
+
+def prettyFraction(n) -> str:
+    tolerance = 1e-8
+    numerator, denominator = findFraction(n)
+
+    # If a fraction for the number cannot be found
+    if numerator == 0:
+        return str(n)
+    if numerator / denominator < tolerance:
+        return "0"
+    if numerator / denominator > (1 - tolerance) and numerator / denominator < (1 + tolerance):
+        if n < 0:
+            return "-1"
+        return "1"
+    
+    numeratorString = str(numerator)
+    denominatorString = str(denominator)
+
+    if n < 0:
+        numeratorString = "-" + numeratorString
+    
+    return "{n}/{d}".format(n=numeratorString, d=denominatorString)
+
+vPrettyFraction = np.vectorize(prettyFraction)
 
 def makeControlGate(gate, controlPosition):
     zeroState = np.outer(buildKet("|0>"), buildBra("<0|"))
@@ -190,6 +214,19 @@ class TestQuantumHelpers(unittest.TestCase):
 
         # Make sure negatives are supported
         self.assertEqual((-1, 2), findFraction(-1/2))
+
+    def test_findFractionComplex(self):
+        self.assertEqual((1, 2, 3, 4), findFraction(1/2 + 3j/4))
+        self.assertEqual((1, 2, 0, 0), findFraction(1/2 + 0j))
+        self.assertEqual((0, 0, 1, 1), findFraction(0 + 1j))
+        self.assertEqual((1, 2, 3, 4), findFraction(1/2 + 3j/4))
+
+    def test_prettyFraction(self):
+        self.assertEqual("1", prettyFraction(1))
+        self.assertEqual("1/2", prettyFraction(1/2))
+        self.assertEqual("0", prettyFraction(0))
+        self.assertEqual("1/3", prettyFraction(1/3))
+        self.assertEqual("1/10", prettyFraction(1/10))
 
     def test_printPrettyWaveFunctionAmplitude(self):
         sqrtSymbol = "\u221A"
