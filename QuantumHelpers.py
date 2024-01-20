@@ -76,28 +76,51 @@ def chainedKron(aListToKron):
         localKron = np.kron(localKron, i)
     return localKron
 
-def findFraction(n: float) -> tuple[int, int]:
+def findFraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, int]:
     maxDenom = 10
     tolerance = 1e-8
 
-    p = np.abs(n)
+    isComplex = True if type(n) == complex else False
+    isNegative = False
+
+    # Local variables to keep track of return values
+    denominator = 0
+    numerator = 0
+    imagNumerator = 0
+    imagDenominator = 0
+    
+    # If the passed in value in complex, make a recursive call to find the fraction for the imaginary part
+    if isComplex:
+        imagNumerator, imagDenominator = findFraction(n.imag)
+        isNegative = (n.real < 0)
+        p = np.abs(n.real)
+    else:
+        isNegative = n < 0
+        p = np.abs(n)
 
     # Check some edge cases and return fast if n is 0 or one
     if p < tolerance and p >= 0:
-        return 0,0
+        return (0,0) if not isComplex else (0,0,imagNumerator,imagDenominator)
     if p < 1 + tolerance and p > 1 - tolerance:
-        return 1, 1
-
+        return (1, 1) if not isComplex else (1, 1, imagNumerator, imagDenominator)
+    
     for denom in range(1, maxDenom + 1):
+        if numerator != 0: break
         for numer in reversed(range(1, denom)):
             distanceFromInt = ((p / numer) * denom) % 1
             if distanceFromInt < tolerance or (1 - distanceFromInt) < tolerance:
                 if np.abs((numer / denom) - p) < tolerance:
-                    if n < 0:
-                        # If input was negative, negate the numerator
-                        return numer * -1, denom  
-                    return numer, denom
-    return 0, 0
+                        numerator = numer
+                        denominator = denom
+                        break
+
+    if isNegative:
+        numerator = numerator * -1
+    
+    if isComplex:
+        return numerator, denominator, imagNumerator, imagDenominator
+    else:
+        return numerator, denominator
 
 def prettyWaveFunctionAmplitude(n) -> str:
     # n can be float or complex float
