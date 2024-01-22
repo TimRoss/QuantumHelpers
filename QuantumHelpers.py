@@ -198,6 +198,49 @@ def makeControlGate(gate, controlPosition):
         return np.kron(zeroState, np.eye(2)) + np.kron(oneState, gate)
     elif controlPosition == 1:
         return np.kron(np.kron(oneState, np.eye(2)) + np.kron(zeroState, gate))
+    
+
+def tokenizeWaveFunctionString(stringstrong):
+    # Tokenize a string
+    # Characters to tokenize on: <, >, |, Capitol Letters, spaces
+    beginPattern = "[<, ,A-Z]"
+    endPattern = "[>, ]"
+    vert = '|'
+    tokens = []
+    # Is it easiest to just loop through characters?
+    currentToken = ""
+    for i, character in enumerate(stringstrong):
+        startOfToken = False
+        endOfToken = False
+        if re.search(beginPattern, character) is not None:
+            startOfToken = True
+        elif re.search(endPattern, character) is not None:
+            endOfToken = True
+        elif character == vert:
+            if currentToken == "":
+                startOfToken = True
+            elif currentToken[0] == '<':
+                endOfToken = True
+            else:
+                startOfToken = True
+        
+        # Handle the tokens and currentToken for if it is the start, end, or middle of the token
+        if startOfToken:
+            if currentToken != "":
+                tokens.append(currentToken)
+            currentToken = character
+        elif endOfToken:
+            currentToken = currentToken + character
+            tokens.append(currentToken)
+            currentToken = ""
+        else:
+            currentToken = currentToken + character
+    
+    # If there is anything left at the end, add it to tokens
+    if currentToken != "":
+        tokens.append(currentToken)
+    return tokens
+
 
 
 
