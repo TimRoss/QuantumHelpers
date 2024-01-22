@@ -44,11 +44,21 @@ def buildBra(aBra):
 def printStates(aKet):
     numberOfQubits = int(np.log2(aKet.size))
     currentState = -1
-    for i in aKet:
-        currentState = currentState + 1
-        if i == 0:
+    for state, coefficient in enumerate(aKet):
+        if coefficient == 0:
             continue
-        print(prettyWaveFunctionAmplitude(i) + " |" + bin(currentState)[2:].zfill(numberOfQubits) + ">")
+        print("{c} |{s}>".format(c = prettyWaveFunctionAmplitude(coefficient), s=bin(state)[2:].zfill(numberOfQubits)))
+
+def toString(aKet):
+    numberOfQubits = int(np.log2(aKet.size))
+    psi = ""
+    for state, coefficient in enumerate(aKet):
+        if coefficient == 0:
+            continue
+        if len(psi) > 0:
+            psi = psi + " + "
+        psi = psi + "{c} |{s}>".format(c = prettyWaveFunctionAmplitude(coefficient), s=bin(state)[2:].zfill(numberOfQubits))
+    return psi
 
 # Density Matrix
 def makeDensityMatrix(waveFunction):
@@ -104,6 +114,7 @@ def findFraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, i
     if p < 1 + tolerance and p > 1 - tolerance:
         return (1, 1) if not isComplex else (1, 1, imagNumerator, imagDenominator)
     
+    # Brute force check every possible numerator for each denominator between 0 and maxDenom--**************+**+++*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     for denom in range(1, maxDenom + 1):
         if numerator != 0: break
         for numer in reversed(range(1, denom)):
@@ -193,6 +204,7 @@ def makeControlGate(gate, controlPosition):
 # -------------------- UNIT TESTS --------------------
 
 class TestQuantumHelpers(unittest.TestCase):
+    sqrtSymbol = "\u221A"
     def test_findFraction(self):
         self.assertEqual((1,1), findFraction(1))
 
@@ -252,16 +264,15 @@ class TestQuantumHelpers(unittest.TestCase):
         self.assertEqual("1/10", prettyFraction(1/10))
 
     def test_printPrettyWaveFunctionAmplitude(self):
-        sqrtSymbol = "\u221A"
         self.assertEqual("1", prettyWaveFunctionAmplitude(1))
-        self.assertEqual("1/{s}2".format(s=sqrtSymbol), prettyWaveFunctionAmplitude(1/np.sqrt(2)))
-        self.assertEqual("1/{s}3".format(s=sqrtSymbol), prettyWaveFunctionAmplitude(1/np.sqrt(3)))
+        self.assertEqual("1/{s}2".format(s=self.sqrtSymbol), prettyWaveFunctionAmplitude(1/np.sqrt(2)))
+        self.assertEqual("1/{s}3".format(s=self.sqrtSymbol), prettyWaveFunctionAmplitude(1/np.sqrt(3)))
         self.assertEqual("1/2", prettyWaveFunctionAmplitude(1/2))
-        self.assertEqual("{s}3/2".format(s=sqrtSymbol), prettyWaveFunctionAmplitude(np.sqrt(3)/2))
-        self.assertEqual("{s}7/{s}8".format(s=sqrtSymbol), prettyWaveFunctionAmplitude(np.sqrt(7)/np.sqrt(8)))
+        self.assertEqual("{s}3/2".format(s=self.sqrtSymbol), prettyWaveFunctionAmplitude(np.sqrt(3)/2))
+        self.assertEqual("{s}7/{s}8".format(s=self.sqrtSymbol), prettyWaveFunctionAmplitude(np.sqrt(7)/np.sqrt(8)))
 
         #Make sure negatives are supported
-        self.assertEqual("-1/{s}2".format(s=sqrtSymbol), prettyWaveFunctionAmplitude(-1/np.sqrt(2)))
+        self.assertEqual("-1/{s}2".format(s=self.sqrtSymbol), prettyWaveFunctionAmplitude(-1/np.sqrt(2)))
 
     def test_makeControlGate(self):
         self.compareMatricies(cNOT, makeControlGate(pauli_X, 0))
@@ -272,6 +283,9 @@ class TestQuantumHelpers(unittest.TestCase):
         for row in range(a.shape[0]):
             for col in range(a.shape[1]):
                 self.assertEqual(a[row][col], b[row][col])
+    
+    def test_toString(self):
+        self.assertEqual("1/{s}2 |00> + 1/{s}2 |11>".format(s=self.sqrtSymbol), toString(np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)])))
 
         
 
