@@ -203,16 +203,20 @@ def makeControlGate(gate, controlPosition):
 def tokenizeWaveFunctionString(stringstrong):
     # Tokenize a string
     # Characters to tokenize on: <, >, |, Capitol Letters, spaces
-    beginPattern = "[<, ,A-Z]"
-    endPattern = "[>, ]"
+    soloTokenPattern = "[+,*,-,/,(,), ]"
+    beginPattern = "[<,A-Z]"
+    endPattern = "[>]"
     vert = '|'
     tokens = []
     # Is it easiest to just loop through characters?
     currentToken = ""
-    for i, character in enumerate(stringstrong):
+    for character in stringstrong:
         startOfToken = False
         endOfToken = False
-        if re.search(beginPattern, character) is not None:
+        if re.search(soloTokenPattern, character) is not None:
+            startOfToken = True
+            endOfToken = True
+        elif re.search(beginPattern, character) is not None:
             startOfToken = True
         elif re.search(endPattern, character) is not None:
             endOfToken = True
@@ -225,7 +229,13 @@ def tokenizeWaveFunctionString(stringstrong):
                 startOfToken = True
         
         # Handle the tokens and currentToken for if it is the start, end, or middle of the token
-        if startOfToken:
+        if startOfToken and endOfToken:
+            if currentToken != "":
+                tokens.append(currentToken)
+            if character != " ":
+                tokens.append(character)
+            currentToken = ""
+        elif startOfToken:
             if currentToken != "":
                 tokens.append(currentToken)
             currentToken = character
@@ -240,9 +250,6 @@ def tokenizeWaveFunctionString(stringstrong):
     if currentToken != "":
         tokens.append(currentToken)
     return tokens
-
-
-
 
 # -------------------- UNIT TESTS --------------------
 
@@ -329,6 +336,36 @@ class TestQuantumHelpers(unittest.TestCase):
     
     def test_toString(self):
         self.assertEqual("1/{s}2 |00> + 1/{s}2 |11>".format(s=self.sqrtSymbol), toString(np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)])))
+
+    def test_tokenizeSingle(self):
+        testPsi = "|01>"
+        expectedTokens = ["|01>"]
+        self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
+
+    def test_tokenizeGates(self):
+        testPsi = "HX|0>"
+        expectedTokens = ["H","X", "|0>"]
+        self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
+
+    def test_tokenizeAddition(self):
+        testPsi = "0.434534|01> + 0.234253|00>"
+        expectedTokens = ["0.434534", "|01>", "+", "0.234253", "|00>"]
+        self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
+
+        testPsi = "0.434534|01>+0.234253|00>"
+        self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
+
+    def test_tokenizeParens(self):
+        testPsi = "0.704(|01> + |00>)"
+        expectedTokens = ["0.704", "(", "|01>", "+", "|00>", ")"]
+        self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
+    
+    def tokenizeCompare(self, testPsi, expectedTokens):
+        rtnArray = tokenizeWaveFunctionString(testPsi)
+        self.assertEqual(len(rtnArray), len(expectedTokens), "Sizes not equal. Got: {t} Expected: {e}".format(t=rtnArray, e=expectedTokens))
+        for i in range(len(expectedTokens)):
+            self.assertEqual(rtnArray[i], expectedTokens[i])
+
 
         
 
