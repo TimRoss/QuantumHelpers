@@ -251,6 +251,97 @@ def tokenizeWaveFunctionString(stringstrong):
         tokens.append(currentToken)
     return tokens
 
+def buildWaveFunction(tokens):
+    operatorsPattern = r"^[A-Z][a-z]+"
+    braPattern = r"^\<[0,1]+\|"
+    ketPattern = r"^\|[0,1]+\>"
+    scalarPattern = r"^[0-9,.]+"
+    parenPattern = r"[(,)]"
+    arithmaticPattern = r"[+,-,*,/]"
+
+    openParenStack = []
+    operationStack = []
+    psi = np.array([])
+
+    print("building " + str(tokens))
+
+    for i, token in enumerate(tokens):
+        if re.search(parenPattern, token):
+            print("paren")
+            if token == "(":
+                openParenStack.append(i)
+            if token == ")":
+                if len(openParenStack) == 0:
+                    print("ERROR: Got a closing paren without a matching opening paren")
+                    return None
+                loc = buildWaveFunction(tokens[openParenStack.pop() + 1:i])
+                psi = operate(psi, loc, operationStack)
+        elif len(openParenStack) > 0:
+            continue
+        elif re.search(operatorsPattern,token):
+            print("operator")
+            # Add a kron operation to the begging of the operations if it is empty to signify a kron should take place
+            if len(operationStack) == 0:
+                operationStack.append("kron")
+            operationStack.append(token)
+        elif re.search(ketPattern, token):
+            print("ket")
+            ket = buildKet(token)
+            psi = operate(psi, ket, operationStack)
+
+            if len(psi) == 0:
+                psi = buildKet(token)
+        elif re.search(braPattern, token):
+            print("bra")
+        elif re.search(scalarPattern, token):
+            print("scalar") 
+             # Add a kron operation to the begging of the operations if it is empty to signify a kron should take place
+            if len(operationStack) == 0:
+                operationStack.append("kron")
+            operationStack.append(token)
+        
+        elif re.search(arithmaticPattern, token):
+            print("arithmatic")
+            operationStack.append(token)
+        else:
+            print("token not recognized")
+    return psi
+
+
+def operate(psi, ket, operationStack):
+    while len(operationStack) > 0:
+        operator = operationStack.pop()
+        if operator ==  "+":
+            psi = psi + ket
+        elif operator ==  "-":
+            psi = psi - ket
+        elif operator ==  "*":
+            psi = np.dot(psi, ket)
+        elif operator ==  "/":
+            print("ERROR: Not sure what to do when dividing by a ket")
+            return None
+        elif operator ==  "H":
+            ket = np.matmul(hadamard, ket)
+        elif operator ==  "X":
+            ket = np.matmul(pauli_X, ket)
+        elif operator ==  "Y":
+            ket = np.matmul(pauli_Y, ket)
+        elif operator ==  "Z":
+            ket = np.matmul(pauli_Z, ket)
+        elif operator ==  "kron":
+            if len(psi) == 0:
+                psi = ket
+            else:
+                psi = np.kron(psi, ket)
+        else:
+            try:
+                loc = float(operator)
+                ket = ket * loc
+            except:
+                print("ERROR: Unrecognized token " + operator)
+    print("finished operating " + str(psi))
+    return psi
+
 # -------------------- UNIT TESTS --------------------
 
 class TestQuantumHelpers(unittest.TestCase):
@@ -333,6 +424,12 @@ class TestQuantumHelpers(unittest.TestCase):
         for row in range(a.shape[0]):
             for col in range(a.shape[1]):
                 self.assertEqual(a[row][col], b[row][col])
+
+    def compareVectors(self, a, b):
+        if(a.shape != b.shape):
+            self.fail("Shapes do not match. " + str(a.shape) + " != " + str(b.shape))
+        for i in range(a.shape[0]):
+            self.assertEqual(a[i], b[i])
     
     def test_toString(self):
         self.assertEqual("1/{s}2 |00> + 1/{s}2 |11>".format(s=self.sqrtSymbol), toString(np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)])))
@@ -366,8 +463,16 @@ class TestQuantumHelpers(unittest.TestCase):
         for i in range(len(expectedTokens)):
             self.assertEqual(rtnArray[i], expectedTokens[i])
 
+    def test_BuildWaveFunctionSuperposition(self):
+        testPsi = "{c}(|0> + |1>)".format(c=1/np.sqrt(2))
+        tokens = tokenizeWaveFunctionString(testPsi)
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi, np.array([1/np.sqrt(2), 1/np.sqrt(2)]))
 
-        
+    def test_BuildWaveFunctionXGate(self):
+        tokens = ['X', "|0>"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi, np.array([0,1]))
 
 
 
