@@ -1,6 +1,7 @@
 import numpy as np
 import re
 import unittest
+from enum import Enum
 
 
 hadamard = np.array([[1,1],[1,-1]])
@@ -251,17 +252,25 @@ def tokenizeWaveFunctionString(stringstrong):
         tokens.append(currentToken)
     return tokens
 
+class WaveFunctionTokens(Enum):
+    BRA = 1
+    KET = 2
+    OPERATOR = 3
+    SCALAR = 4
+    ARITHMETIC = 5
+
 def buildWaveFunction(tokens):
     operatorsPattern = r"^[A-Z][a-z]+"
     braPattern = r"^\<[0,1]+\|"
     ketPattern = r"^\|[0,1]+\>"
     scalarPattern = r"^[0-9,.]+"
     parenPattern = r"[(,)]"
-    arithmaticPattern = r"[+,-,*,/]"
+    endTermPattern = r"[+,-]"
+    arithmaticPattern = r"[*,/]"
 
     openParenStack = []
-    operationStack = []
-    psi = np.array([])
+    overallStack = []
+    currentTermStack = []
 
     print("building " + str(tokens))
 
@@ -274,73 +283,181 @@ def buildWaveFunction(tokens):
                 if len(openParenStack) == 0:
                     print("ERROR: Got a closing paren without a matching opening paren")
                     return None
-                loc = buildWaveFunction(tokens[openParenStack.pop() + 1:i])
-                psi = operate(psi, loc, operationStack)
+                loc, loctype = buildWaveFunction(tokens[openParenStack.pop() + 1:i])
+                currentTermStack.append((loc, loctype))
         elif len(openParenStack) > 0:
             continue
         elif re.search(operatorsPattern,token):
             print("operator")
-            # Add a kron operation to the begging of the operations if it is empty to signify a kron should take place
-            if len(operationStack) == 0:
-                operationStack.append("kron")
-            operationStack.append(token)
+            currentTermStack.append((token, WaveFunctionTokens.OPERATOR))
         elif re.search(ketPattern, token):
             print("ket")
-            ket = buildKet(token)
-            psi = operate(psi, ket, operationStack)
-
-            if len(psi) == 0:
-                psi = buildKet(token)
+            currentTermStack.append((buildKet(token), WaveFunctionTokens.KET))
         elif re.search(braPattern, token):
             print("bra")
+            currentTermStack.append((buildBra(token), WaveFunctionTokens.BRA))
         elif re.search(scalarPattern, token):
-            print("scalar") 
-             # Add a kron operation to the begging of the operations if it is empty to signify a kron should take place
-            if len(operationStack) == 0:
-                operationStack.append("kron")
-            operationStack.append(token)
-        
+            print("scalar")
+            currentTermStack.append((float(token), WaveFunctionTokens.SCALAR))
         elif re.search(arithmaticPattern, token):
             print("arithmatic")
-            operationStack.append(token)
+            currentTermStack.append((token, WaveFunctionTokens.ARITHMETIC))
+        elif re.search(endTermPattern, token):
+            print("end of term")
+            #Evaluate current term and put result into overall stack
+            overallStack.append(evaluateStack(currentTermStack))
+            currentTermStack = []
+            # Put arithmetic onto overall stack
+            overallStack.append((token, WaveFunctionTokens.ARITHMETIC))
         else:
             print("token not recognized")
-    return psi
+    
+    # Evaluate the full stack and what is left over in the overall stack
+    return evaluateStack(overallStack + currentTermStack)
 
-
-def operate(psi, ket, operationStack):
-    while len(operationStack) > 0:
-        operator = operationStack.pop()
-        if operator ==  "+":
-            psi = psi + ket
-        elif operator ==  "-":
-            psi = psi - ket
-        elif operator ==  "*":
-            psi = np.dot(psi, ket)
-        elif operator ==  "/":
-            print("ERROR: Not sure what to do when dividing by a ket")
-            return None
-        elif operator ==  "H":
-            ket = np.matmul(hadamard, ket)
-        elif operator ==  "X":
-            ket = np.matmul(pauli_X, ket)
-        elif operator ==  "Y":
-            ket = np.matmul(pauli_Y, ket)
-        elif operator ==  "Z":
-            ket = np.matmul(pauli_Z, ket)
-        elif operator ==  "kron":
-            if len(psi) == 0:
-                psi = ket
-            else:
-                psi = np.kron(psi, ket)
+def evaluateStack(stack):
+    print("evaluating stack " + str(stack))
+    while len(stack) > 1:
+        # evaluate
+        right = stack.pop()
+        left = stack.pop()
+        arithmetic = None
+        result = None
+        if left[1] == WaveFunctionTokens.ARITHMETIC:
+            arithmetic = left
+            left = stack.pop()
+            result = evaluateExplicit(left=left, arithmetic=arithmetic, right=right)
         else:
-            try:
-                loc = float(operator)
-                ket = ket * loc
-            except:
-                print("ERROR: Unrecognized token " + operator)
-    print("finished operating " + str(psi))
-    return psi
+            result = evaluateImplicit(left=left,right=right)
+        stack.append(result)
+
+    rtn = stack.pop()
+    print("Evaluated stack as: " + str(rtn))
+    return rtn
+
+def evaluateExplicit(left, arithmetic, right):
+    # Really only need to handle BRA, KET, and SCALAR in this method
+    # Left side BRA
+    if left[1] == WaveFunctionTokens.BRA:
+        # Arithmetic +
+        if arithmetic[0] == "+":
+            if right[1] == WaveFunctionTokens.BRA:
+                return (left[0] + right[0], WaveFunctionTokens.BRA)
+        # Arithmetic -
+        if arithmetic[0] == "-":
+            if right[1] == WaveFunctionTokens.BRA:
+                return (left[0] - right[0], WaveFunctionTokens.BRA)
+        # Arithmetic *
+        if arithmetic[0] == "*":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (left[0] * right[0], WaveFunctionTokens.BRA)
+        # Arithmetic /
+        if arithmetic[0] == "/":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (left[0] * right[0], WaveFunctionTokens.BRA)
+    # Left side KET
+    if left[1] == WaveFunctionTokens.KET:
+        # Arithmetic +
+        if arithmetic[0] == "+":
+            if right[1] == WaveFunctionTokens.KET:
+                return (left[0] + right[0], WaveFunctionTokens.KET)
+        # Arithmetic -
+        if arithmetic[0] == "-":
+            if right[1] == WaveFunctionTokens.KET:
+                return (left[0] - right[0], WaveFunctionTokens.KET)
+        # Arithmetic *
+        if arithmetic[0] == "*":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (left[0] * right[0], WaveFunctionTokens.KET)
+        # Arithmetic /
+        if arithmetic[0] == "/":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (left[0] * right[0], WaveFunctionTokens.KET)
+    # Left side SCALAR
+    if left[1] == WaveFunctionTokens.SCALAR:
+        # Arithmetic +
+        if arithmetic[0] == "+":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (left[0] + right[0], WaveFunctionTokens.SCALAR)
+         # Arithmetic -
+        if arithmetic[0] == "-":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (left[0] + right[0], WaveFunctionTokens.SCALAR)
+         # Arithmetic *
+        if arithmetic[0] == "*":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (left[0] + right[0], WaveFunctionTokens.SCALAR)
+         # Arithmetic /
+        if arithmetic[0] == "/":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (left[0] + right[0], WaveFunctionTokens.SCALAR)
+        
+    
+    print("Something was not handled, evaluateExplicit. Left:{l} Arithmetic:{a} Right:{r}".format(\
+        l=str(left), r=str(right),a=str(arithmetic)))
+
+def evaluateImplicit(left, right):
+    # Left side BRA
+    if left[1] == WaveFunctionTokens.BRA:
+        # BRA BRA
+        if right[1] == WaveFunctionTokens.BRA:
+            return (np.kron(left[0], right[0]), WaveFunctionTokens.BRA)
+        # BRA KET
+        if right[1] == WaveFunctionTokens.KET:
+            return (np.inner(left[0], right[0]), WaveFunctionTokens.SCALAR)
+        # BRA OPERATOR
+            # Doesn't make sense to have operator after Bra
+        # BRA SCALAR
+            # Doesn't make sense to have scalar after Bra
+        # BRA ARITHMETIC
+            # Doesn't make sense to have arithmetic as the right
+    # Left side KET
+    if left[1] == WaveFunctionTokens.KET:
+        # KET BRA
+        if right[1] == WaveFunctionTokens.BRA:
+            return (np.outer(left[0],right[0], WaveFunctionTokens.OPERATOR))
+        # KET KET
+        if right[1] == WaveFunctionTokens.KET:
+            return (np.kron(left[0], right[0]), WaveFunctionTokens.KET)
+        # KET OPERATOR
+            # Doesn't make sense to have operator after KET
+        # KET SCALAR
+            # Doesn't make sense to have scalar after KET
+        # KET ARITHMETIC
+            # Doesn't make sense to have arithmetic as the right
+    # Left side operator
+    if left[1] == WaveFunctionTokens.OPERATOR:
+        # OPERATOR BRA
+            # Doesn't make sense, dimensions won't work
+        # OPERATOR KET
+        if right[1] == WaveFunctionTokens.KET:
+            return (np.matmul(left[0], right[0]), WaveFunctionTokens.KET)
+        # OPERATOR OPERATOR
+        if right[1] == WaveFunctionTokens.OPERATOR:
+            return (np.matmul(left[0], right[0]), WaveFunctionTokens.OPERATOR)
+        # OPERATOR SCALAR
+            # Doesn't make sense to have a scalar after an operator
+        # OPERATOR ARITHMETIC
+            # Doesn't make sense to have arithmetic as the right
+    # left side SCALAR
+    if left[1] == WaveFunctionTokens.SCALAR:
+        # SCALAR BRA
+        if right[1] == WaveFunctionTokens.BRA:
+            return (left[0] * right[0], WaveFunctionTokens.BRA)
+        # SCALAR KET
+        if right[1] == WaveFunctionTokens.KET:
+            return (left[0] * right[0], WaveFunctionTokens.KET)
+        # SCALAR OPERATOR
+        if right[1] == WaveFunctionTokens.OPERATOR:
+            return (left[0] * right[0], WaveFunctionTokens.OPERATOR)
+        # SCALAR SCALAR
+        if right[1] == WaveFunctionTokens.SCALAR:
+            return (left[0] * right[0], WaveFunctionTokens.SCALAR)
+        # SCALAR ARITHMETIC
+            # Doesn't make sense to have arithmetic as the right
+    # Left side Arithmetic
+        # Not handling arithmetic in this method
+    print("Something was not handled, evaluateImplicit. Left:{l} Right:{r}".format(l=str(left), r=str(right)))
 
 # -------------------- UNIT TESTS --------------------
 
@@ -467,12 +584,12 @@ class TestQuantumHelpers(unittest.TestCase):
         testPsi = "{c}(|0> + |1>)".format(c=1/np.sqrt(2))
         tokens = tokenizeWaveFunctionString(testPsi)
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi, np.array([1/np.sqrt(2), 1/np.sqrt(2)]))
+        self.compareVectors(rtnPsi[0], np.array([1/np.sqrt(2), 1/np.sqrt(2)]))
 
     def test_BuildWaveFunctionXGate(self):
         tokens = ['X', "|0>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi, np.array([0,1]))
+        self.compareVectors(rtnPsi[0], np.array([0,1]))
 
 
 
