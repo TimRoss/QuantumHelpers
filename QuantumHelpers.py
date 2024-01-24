@@ -259,8 +259,17 @@ class WaveFunctionTokens(Enum):
     SCALAR = 4
     ARITHMETIC = 5
 
+operators = {
+    "X": pauli_X,
+    "Y": pauli_Y,
+    "Z": pauli_Z,
+    "H": hadamard,
+    "I": np.eye(2),
+    "Cnot": cNOT
+}
+
 def buildWaveFunction(tokens):
-    operatorsPattern = r"^[A-Z][a-z]+"
+    operatorsPattern = r"^[A-Z][a-z]*"
     braPattern = r"^\<[0,1]+\|"
     ketPattern = r"^\|[0,1]+\>"
     scalarPattern = r"^[0-9,.]+"
@@ -289,7 +298,10 @@ def buildWaveFunction(tokens):
             continue
         elif re.search(operatorsPattern,token):
             print("operator")
-            currentTermStack.append((token, WaveFunctionTokens.OPERATOR))
+            if token in operators:
+                currentTermStack.append((operators[token], WaveFunctionTokens.OPERATOR))
+            else:
+                print("ERROR: Unrecognized Operator: " + token)
         elif re.search(ketPattern, token):
             print("ket")
             currentTermStack.append((buildKet(token), WaveFunctionTokens.KET))
@@ -386,11 +398,11 @@ def evaluateExplicit(left, arithmetic, right):
          # Arithmetic *
         if arithmetic[0] == "*":
             if right[1] == WaveFunctionTokens.SCALAR:
-                return (left[0] + right[0], WaveFunctionTokens.SCALAR)
+                return (left[0] * right[0], WaveFunctionTokens.SCALAR)
          # Arithmetic /
         if arithmetic[0] == "/":
             if right[1] == WaveFunctionTokens.SCALAR:
-                return (left[0] + right[0], WaveFunctionTokens.SCALAR)
+                return (left[0] / right[0], WaveFunctionTokens.SCALAR)
         
     
     print("Something was not handled, evaluateExplicit. Left:{l} Arithmetic:{a} Right:{r}".format(\
@@ -434,7 +446,7 @@ def evaluateImplicit(left, right):
             return (np.matmul(left[0], right[0]), WaveFunctionTokens.KET)
         # OPERATOR OPERATOR
         if right[1] == WaveFunctionTokens.OPERATOR:
-            return (np.matmul(left[0], right[0]), WaveFunctionTokens.OPERATOR)
+            return (np.kron(left[0], right[0]), WaveFunctionTokens.OPERATOR)
         # OPERATOR SCALAR
             # Doesn't make sense to have a scalar after an operator
         # OPERATOR ARITHMETIC
@@ -590,6 +602,14 @@ class TestQuantumHelpers(unittest.TestCase):
         tokens = ['X', "|0>"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.array([0,1]))
+    
+    def test_BuildWaveFunctionCnotGate(self):
+        tokens = ['Cnot', "|00>"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.array([1,0,0,0]))
+        tokens = ['Cnot', "|10>"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.array([0,0,0,1]))
 
 
 
