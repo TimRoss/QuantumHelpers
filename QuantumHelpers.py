@@ -558,7 +558,7 @@ class TestQuantumHelpers(unittest.TestCase):
         if(a.shape != b.shape):
             self.fail("Shapes do not match. " + str(a.shape) + " != " + str(b.shape))
         for i in range(a.shape[0]):
-            self.assertEqual(a[i], b[i])
+            self.assertEqual(a[i], b[i], "{a} does not match {b}".format(a=a,b=b))
     
     def test_toString(self):
         self.assertEqual("1/{s}2 |00> + 1/{s}2 |11>".format(s=self.sqrtSymbol), toString(np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)])))
@@ -611,6 +611,20 @@ class TestQuantumHelpers(unittest.TestCase):
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.array([0,0,0,1]))
 
+    def test_BuildWaveFunctionFlipFirst(self):
+        tokens = ["(", "X", "I", ")", "|00>"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.array([0,0,1,0]))
+
+    def test_BuildWaveFunctionFlipSecond(self):
+        tokens = ["(", "I", "X", ")", "|00>"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.array([0,1,0,0]))
+
+    def test_BuildWaveFunctionBellState(self):
+        tokens = ["Cnot", "(", "H", "I", ")", "|00>"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.array([1/np.sqrt(2),0,0,1/np.sqrt(2)]))
 
 
 # Run unit tests if run as a script
