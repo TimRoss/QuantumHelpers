@@ -272,11 +272,11 @@ operators = {
 def buildWaveFunction(tokens):
     operatorsPattern = r"^[A-Z][a-z]*"
     braPattern = r"^\<[0,1]+\|"
-    ketPattern = r"^\|[0,1]+\>"
-    scalarPattern = r"^[0-9,.]+"
-    parenPattern = r"[(,)]"
-    endTermPattern = r"[+,-]"
-    arithmaticPattern = r"[*,/,√]"
+    ketPattern = r"^\|[0,1]+\>$"
+    scalarPattern = r"^[0-9,.]+$"
+    parenPattern = r"^[(,)]$"
+    endTermPattern = r"^[+,-]$"
+    arithmaticPattern = r"^[*,/,√]$|^Sr$"
 
     openParenStack = []
     overallStack = []
@@ -325,6 +325,8 @@ def buildWaveFunction(tokens):
         else:
             print("token not recognized")
     
+    if len(openParenStack) > 0:
+        print("ERROR: Unclosed parenthesis")
     # Evaluate the full stack and what is left over in the overall stack
     return evaluateStack(overallStack + currentTermStack)
 
@@ -336,7 +338,7 @@ def evaluateStack(stack):
         left = stack.pop()
         arithmetic = None
         result = None
-        if left[1] == WaveFunctionTokens.ARITHMETIC and left[0] != "√":
+        if left[1] == WaveFunctionTokens.ARITHMETIC and not (left[0] == "√" or left[0] == "Sr"):
             arithmetic = left
             left = stack.pop()
             result = evaluateExplicit(left=left, arithmetic=arithmetic, right=right)
@@ -469,12 +471,17 @@ def evaluateImplicit(left, right):
         # SCALAR ARITHMETIC
             # Doesn't make sense to have arithmetic as the right
     # Left side Arithmetic
-    if left[1] == WaveFunctionTokens.ARITHMETIC and left[0] == "√":
+    if left[1] == WaveFunctionTokens.ARITHMETIC and (left[0] == "√" or left[0] == "Sr"):
         # Only handling square root in this method
         if right[1] == WaveFunctionTokens.SCALAR:
             return (np.sqrt(right[0]), WaveFunctionTokens.SCALAR)
     
     print("Something was not handled, evaluateImplicit. Left:{l} Right:{r}".format(l=str(left), r=str(right)))
+
+def readInWaveFunction(psi):
+    tokens = tokenizeWaveFunctionString(psi)
+    evaluatedPsi = buildWaveFunction(tokens)
+    return toString(evaluatedPsi[0])
 
 # -------------------- UNIT TESTS --------------------
 
@@ -645,6 +652,11 @@ class TestQuantumHelpers(unittest.TestCase):
         tokens = ["(", "1", "/", "√", "2", ")", "(", "|0>", "+", "|1>", ")"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.array([1/np.sqrt(2),1/np.sqrt(2)]))
+
+        tokens = ["(", "1", "/", "Sr", "2", ")", "(", "|0>", "+", "|1>", ")"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.array([1/np.sqrt(2),1/np.sqrt(2)]))
+    
 
 
 # Run unit tests if run as a script
