@@ -3,6 +3,7 @@ import re
 import unittest
 from enum import Enum
 
+DEBUG = False
 
 hadamard = np.array([[1,1],[1,-1]])
 
@@ -204,9 +205,9 @@ def makeControlGate(gate, controlPosition):
 def tokenizeWaveFunctionString(stringstrong):
     # Tokenize a string
     # Characters to tokenize on: <, >, |, Capitol Letters, spaces
-    soloTokenPattern = "[+,*,-,/,(,), ]"
-    beginPattern = "[<,A-Z]"
-    endPattern = "[>]"
+    soloTokenPattern = r"[+,*,-,/,(,),√, ]"
+    beginPattern = r"[<,A-Z]"
+    endPattern = r"[>]"
     vert = '|'
     tokens = []
     # Is it easiest to just loop through characters?
@@ -275,17 +276,17 @@ def buildWaveFunction(tokens):
     scalarPattern = r"^[0-9,.]+"
     parenPattern = r"[(,)]"
     endTermPattern = r"[+,-]"
-    arithmaticPattern = r"[*,/]"
+    arithmaticPattern = r"[*,/,√]"
 
     openParenStack = []
     overallStack = []
     currentTermStack = []
 
-    print("building " + str(tokens))
+    if DEBUG: print("building " + str(tokens))
 
     for i, token in enumerate(tokens):
         if re.search(parenPattern, token):
-            print("paren")
+            if DEBUG: print("paren")
             if token == "(":
                 openParenStack.append(i)
             if token == ")":
@@ -297,25 +298,25 @@ def buildWaveFunction(tokens):
         elif len(openParenStack) > 0:
             continue
         elif re.search(operatorsPattern,token):
-            print("operator")
+            if DEBUG: print("operator")
             if token in operators:
                 currentTermStack.append((operators[token], WaveFunctionTokens.OPERATOR))
             else:
                 print("ERROR: Unrecognized Operator: " + token)
         elif re.search(ketPattern, token):
-            print("ket")
+            if DEBUG: print("ket")
             currentTermStack.append((buildKet(token), WaveFunctionTokens.KET))
         elif re.search(braPattern, token):
-            print("bra")
+            if DEBUG: print("bra")
             currentTermStack.append((buildBra(token), WaveFunctionTokens.BRA))
         elif re.search(scalarPattern, token):
-            print("scalar")
+            if DEBUG: print("scalar")
             currentTermStack.append((float(token), WaveFunctionTokens.SCALAR))
         elif re.search(arithmaticPattern, token):
-            print("arithmatic")
+            if DEBUG: print("arithmatic")
             currentTermStack.append((token, WaveFunctionTokens.ARITHMETIC))
         elif re.search(endTermPattern, token):
-            print("end of term")
+            if DEBUG: print("end of term")
             #Evaluate current term and put result into overall stack
             overallStack.append(evaluateStack(currentTermStack))
             currentTermStack = []
@@ -328,14 +329,14 @@ def buildWaveFunction(tokens):
     return evaluateStack(overallStack + currentTermStack)
 
 def evaluateStack(stack):
-    print("evaluating stack " + str(stack))
+    if DEBUG: print("evaluating stack " + str(stack))
     while len(stack) > 1:
         # evaluate
         right = stack.pop()
         left = stack.pop()
         arithmetic = None
         result = None
-        if left[1] == WaveFunctionTokens.ARITHMETIC:
+        if left[1] == WaveFunctionTokens.ARITHMETIC and left[0] != "√":
             arithmetic = left
             left = stack.pop()
             result = evaluateExplicit(left=left, arithmetic=arithmetic, right=right)
@@ -344,7 +345,7 @@ def evaluateStack(stack):
         stack.append(result)
 
     rtn = stack.pop()
-    print("Evaluated stack as: " + str(rtn))
+    if DEBUG: print("Evaluated stack as: " + str(rtn))
     return rtn
 
 def evaluateExplicit(left, arithmetic, right):
@@ -468,7 +469,11 @@ def evaluateImplicit(left, right):
         # SCALAR ARITHMETIC
             # Doesn't make sense to have arithmetic as the right
     # Left side Arithmetic
-        # Not handling arithmetic in this method
+    if left[1] == WaveFunctionTokens.ARITHMETIC and left[0] == "√":
+        # Only handling square root in this method
+        if right[1] == WaveFunctionTokens.SCALAR:
+            return (np.sqrt(right[0]), WaveFunctionTokens.SCALAR)
+    
     print("Something was not handled, evaluateImplicit. Left:{l} Right:{r}".format(l=str(left), r=str(right)))
 
 # -------------------- UNIT TESTS --------------------
@@ -585,6 +590,16 @@ class TestQuantumHelpers(unittest.TestCase):
         testPsi = "0.704(|01> + |00>)"
         expectedTokens = ["0.704", "(", "|01>", "+", "|00>", ")"]
         self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
+
+    def test_tokenizeBellState(self):
+        testPsi = "Cnot(HI)|00>"
+        expectedTokens = ["Cnot", "(", "H", "I", ")", "|00>"]
+        self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
+
+    def test_tokenizeSqrt(self):
+        testPsi = "(1/√2)(|0>+|1>)"
+        expectedTokens = ["(", "1", "/", "√", "2", ")", "(", "|0>", "+", "|1>", ")"]
+        self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
     
     def tokenizeCompare(self, testPsi, expectedTokens):
         rtnArray = tokenizeWaveFunctionString(testPsi)
@@ -625,6 +640,11 @@ class TestQuantumHelpers(unittest.TestCase):
         tokens = ["Cnot", "(", "H", "I", ")", "|00>"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.array([1/np.sqrt(2),0,0,1/np.sqrt(2)]))
+
+    def test_BuildWaveFunctionSqrt(self):
+        tokens = ["(", "1", "/", "√", "2", ")", "(", "|0>", "+", "|1>", ")"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.array([1/np.sqrt(2),1/np.sqrt(2)]))
 
 
 # Run unit tests if run as a script
