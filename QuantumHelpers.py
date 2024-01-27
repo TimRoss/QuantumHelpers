@@ -308,8 +308,12 @@ def buildWaveFunction(tokens):
                 if len(openParenStack) == 0:
                     print("ERROR: Got a closing paren without a matching opening paren")
                     return None
-                loc, loctype = buildWaveFunction(tokens[openParenStack.pop() + 1:i])
-                currentTermStack.append((loc, loctype))
+                # Only handle the outermost parens, inner parens will be handled by the recursive call
+                openingParenIndex = openParenStack.pop()
+                if len(openParenStack) == 0:
+                    # Make a recursive call to this function to handle the stuff inside the parens
+                    loc, loctype = buildWaveFunction(tokens[openingParenIndex + 1:i])
+                    currentTermStack.append((loc, loctype))
         elif len(openParenStack) > 0:
             continue
         elif re.search(arithmaticPattern, token):
@@ -704,6 +708,12 @@ class TestQuantumHelpers(unittest.TestCase):
         tokens = ["I", "+", "I"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareMatricies(rtnPsi[0], np.array([[2,0],[0,2]]))
+
+    def test_buildWaveFunctionNestedParams(self):
+        testPsiString = "((IX)|10>)|0>"
+        tokens = tokenizeWaveFunctionString(testPsiString)
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], buildKet("|110>"))
     
 
 
