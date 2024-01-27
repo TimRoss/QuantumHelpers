@@ -421,6 +421,17 @@ def evaluateExplicit(left, arithmetic, right):
         if arithmetic[0] == "/":
             if right[1] == WaveFunctionTokens.SCALAR:
                 return (left[0] / right[0], WaveFunctionTokens.SCALAR)
+    # Left side Operator
+    if left[1] == WaveFunctionTokens.OPERATOR:
+        # Arithmetic + 
+        if arithmetic[0] == "+":
+            if right[1] == WaveFunctionTokens.OPERATOR:
+                return ((left[0] + right[0], WaveFunctionTokens.OPERATOR))
+        # Arithmetic -
+        if arithmetic[0] == "-":
+            if right[1] == WaveFunctionTokens.OPERATOR:
+                return ((left[0] - right[0], WaveFunctionTokens.OPERATOR))
+
         
     
     print("Something was not handled, evaluateExplicit. Left:{l} Arithmetic:{a} Right:{r}".format(\
@@ -677,6 +688,16 @@ class TestQuantumHelpers(unittest.TestCase):
         tokens = ["|0>", "<0|"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareMatricies(rtnPsi[0], np.array([[1,0],[0,0]]))
+
+    def test_OperatorSubtract(self):
+        tokens = ["I", "-", "I"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareMatricies(rtnPsi[0], np.array([[0,0],[0,0]]))
+
+    def test_OperatorAdd(self):
+        tokens = ["I", "+", "I"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareMatricies(rtnPsi[0], np.array([[2,0],[0,2]]))
     
 
 
