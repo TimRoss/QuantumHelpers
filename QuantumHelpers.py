@@ -99,7 +99,7 @@ def chainedKron(aListToKron):
     return localKron
 
 def findFraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, int]:
-    maxDenom = 10
+    maxDenom = 16
     tolerance = 1e-8
 
     isComplex = True if type(n) == complex else False
@@ -469,7 +469,8 @@ def evaluateImplicit(left, right):
     # Left side operator
     if left[1] == WaveFunctionTokens.OPERATOR:
         # OPERATOR BRA
-            # Doesn't make sense, dimensions won't work
+        if right[1] == WaveFunctionTokens.BRA:
+            return (np.matmul(left[0], right[0]), WaveFunctionTokens.BRA)
         # OPERATOR KET
         if right[1] == WaveFunctionTokens.KET:
             return (np.matmul(left[0], right[0]), WaveFunctionTokens.KET)
@@ -648,6 +649,11 @@ class TestQuantumHelpers(unittest.TestCase):
 
     def test_BuildWaveFunctionXGate(self):
         tokens = ['X', "|0>"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.array([0,1]))
+
+    def test_BuildWaveFunctionOperatorBra(self):
+        tokens = ['X', "<0|"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.array([0,1]))
     
