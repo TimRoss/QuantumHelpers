@@ -52,6 +52,16 @@ def printStates(aKet):
         print("{c} |{s}>".format(c = prettyWaveFunctionAmplitude(coefficient), s=bin(state)[2:].zfill(numberOfQubits)))
 
 def toString(aKet):
+    if type(aKet) == tuple:
+        match aKet[1]:
+            case WaveFunctionTokens.SCALAR:
+                return str(aKet[0])
+            case WaveFunctionTokens.OPERATOR:
+                return vPrettyWaveFunctionAmplitude(aKet[0])
+            case WaveFunctionTokens.KET:
+                return toString(aKet[0])
+            case WaveFunctionTokens.BRA:
+                return toString(aKet[0])
     numberOfQubits = int(np.log2(aKet.size))
     psi = ""
     for state, coefficient in enumerate(aKet):
@@ -284,6 +294,11 @@ def buildWaveFunction(tokens):
 
     if DEBUG: print("building " + str(tokens))
 
+    # Figure out what type each token in and add it into the current term stack in a tuple
+    # as (token, type) where the type is a WaveFunctionTokens type and the token is
+    # evaluated in into its numeric form.
+    # The order of these pattern matche matter because there are specific patterns
+    # farther up that will also match more general patterns below.
     for i, token in enumerate(tokens):
         if re.search(parenPattern, token):
             if DEBUG: print("paren")
@@ -297,6 +312,9 @@ def buildWaveFunction(tokens):
                 currentTermStack.append((loc, loctype))
         elif len(openParenStack) > 0:
             continue
+        elif re.search(arithmaticPattern, token):
+            if DEBUG: print("arithmatic")
+            currentTermStack.append((token, WaveFunctionTokens.ARITHMETIC))
         elif re.search(operatorsPattern,token):
             if DEBUG: print("operator")
             if token in operators:
@@ -312,9 +330,6 @@ def buildWaveFunction(tokens):
         elif re.search(scalarPattern, token):
             if DEBUG: print("scalar")
             currentTermStack.append((float(token), WaveFunctionTokens.SCALAR))
-        elif re.search(arithmaticPattern, token):
-            if DEBUG: print("arithmatic")
-            currentTermStack.append((token, WaveFunctionTokens.ARITHMETIC))
         elif re.search(endTermPattern, token):
             if DEBUG: print("end of term")
             #Evaluate current term and put result into overall stack
@@ -430,7 +445,7 @@ def evaluateImplicit(left, right):
     if left[1] == WaveFunctionTokens.KET:
         # KET BRA
         if right[1] == WaveFunctionTokens.BRA:
-            return (np.outer(left[0],right[0], WaveFunctionTokens.OPERATOR))
+            return (np.outer(left[0],right[0]), WaveFunctionTokens.OPERATOR)
         # KET KET
         if right[1] == WaveFunctionTokens.KET:
             return (np.kron(left[0], right[0]), WaveFunctionTokens.KET)
@@ -648,14 +663,20 @@ class TestQuantumHelpers(unittest.TestCase):
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.array([1/np.sqrt(2),0,0,1/np.sqrt(2)]))
 
-    def test_BuildWaveFunctionSqrt(self):
+    def test_BuildWaveFunctionSqrtSymbol(self):
         tokens = ["(", "1", "/", "√", "2", ")", "(", "|0>", "+", "|1>", ")"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.array([1/np.sqrt(2),1/np.sqrt(2)]))
 
+    def test_BuildWaveFunctionSqrtWord(self):
         tokens = ["(", "1", "/", "Sr", "2", ")", "(", "|0>", "+", "|1>", ")"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.array([1/np.sqrt(2),1/np.sqrt(2)]))
+    
+    def test_evalKetBra(self):
+        tokens = ["|0>", "<0|"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareMatricies(rtnPsi[0], np.array([[1,0],[0,0]]))
     
 
 
