@@ -21,6 +21,8 @@ cNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
 cZ = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]])
 hadamard = (1 / np.sqrt(2)) * np.array([[1,1],[1,-1]])
 
+singleNumArithmetic = ["√","Sr","Exp"]
+
 def buildKet(aKet):
     # Verify input has the correct format
     if not re.match("^|[0-1]+>", aKet):
@@ -215,7 +217,7 @@ def makeControlGate(gate, controlPosition):
 def tokenizeWaveFunctionString(stringstrong):
     # Tokenize a string
     # Characters to tokenize on: <, >, |, Capitol Letters, spaces
-    soloTokenPattern = r"[+,*,-,/,(,),√, ]"
+    soloTokenPattern = r"^[+,*,-,/,(,),√,π, ]"
     beginPattern = r"[<,A-Z]"
     endPattern = r"[>]"
     vert = '|'
@@ -286,7 +288,7 @@ def buildWaveFunction(tokens):
     scalarPattern = r"^[0-9,.]+$"
     parenPattern = r"^[(,)]$"
     endTermPattern = r"^[+,-]$"
-    arithmaticPattern = r"^[*,/,√]$|^Sr$"
+    arithmaticPattern = r"^[*,/,√]$|^Sr$|^Exp$"
 
     openParenStack = []
     overallStack = []
@@ -357,7 +359,7 @@ def evaluateStack(stack):
         left = stack.pop()
         arithmetic = None
         result = None
-        if left[1] == WaveFunctionTokens.ARITHMETIC and not (left[0] == "√" or left[0] == "Sr"):
+        if left[1] == WaveFunctionTokens.ARITHMETIC and left[0] not in singleNumArithmetic:
             arithmetic = left
             left = stack.pop()
             result = evaluateExplicit(left=left, arithmetic=arithmetic, right=right)
@@ -502,10 +504,13 @@ def evaluateImplicit(left, right):
         # SCALAR ARITHMETIC
             # Doesn't make sense to have arithmetic as the right
     # Left side Arithmetic
-    if left[1] == WaveFunctionTokens.ARITHMETIC and (left[0] == "√" or left[0] == "Sr"):
-        # Only handling square root in this method
-        if right[1] == WaveFunctionTokens.SCALAR:
-            return (np.sqrt(right[0]), WaveFunctionTokens.SCALAR)
+    if left[1] == WaveFunctionTokens.ARITHMETIC:
+        if(left[0] == "√" or left[0] == "Sr"):
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (np.sqrt(right[0]), WaveFunctionTokens.SCALAR)
+        if left[0] == "Exp":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (np.e**(right[0]), WaveFunctionTokens.SCALAR)
     
     print("Something was not handled, evaluateImplicit. Left:{l} Right:{r}".format(l=str(left), r=str(right)))
 
@@ -638,6 +643,11 @@ class TestQuantumHelpers(unittest.TestCase):
         testPsi = "(1/√2)(|0>+|1>)"
         expectedTokens = ["(", "1", "/", "√", "2", ")", "(", "|0>", "+", "|1>", ")"]
         self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
+
+    def test_tokenizeExponentials(self):
+        testPsi = "2Exp(2\u03c0)|0>"
+        expectedTokens = ["2", "Exp", "(", "2", "\u03c0", ")", "|0>"]
+        self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
     
     def tokenizeCompare(self, testPsi, expectedTokens):
         rtnArray = tokenizeWaveFunctionString(testPsi)
@@ -714,6 +724,11 @@ class TestQuantumHelpers(unittest.TestCase):
         tokens = tokenizeWaveFunctionString(testPsiString)
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], buildKet("|110>"))
+
+    def test_buildWaveFunctionExponential(self):
+        tokens = ["(", "Exp", "2", ")", "|0>"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.e**2 * buildKet("|0>"))
     
 
 
