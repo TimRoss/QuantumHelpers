@@ -285,7 +285,7 @@ def buildWaveFunction(tokens):
     operatorsPattern = r"^[A-Z][a-z]*"
     braPattern = r"^\<[0,1]+\|"
     ketPattern = r"^\|[0,1]+\>$"
-    scalarPattern = r"^[0-9,.]+$"
+    scalarPattern = r"^[0-9,.,j]+$"
     parenPattern = r"^[(,)]$"
     endTermPattern = r"^[+,-]$"
     arithmaticPattern = r"^[*,/,√]$|^Sr$|^Exp$"
@@ -335,7 +335,7 @@ def buildWaveFunction(tokens):
             currentTermStack.append((buildBra(token), WaveFunctionTokens.BRA))
         elif re.search(scalarPattern, token):
             if DEBUG: print("scalar")
-            currentTermStack.append((float(token), WaveFunctionTokens.SCALAR))
+            currentTermStack.append((complex(token), WaveFunctionTokens.SCALAR))
         elif re.search(endTermPattern, token):
             if DEBUG: print("end of term")
             #Evaluate current term and put result into overall stack
@@ -344,7 +344,7 @@ def buildWaveFunction(tokens):
             # Put arithmetic onto overall stack
             overallStack.append((token, WaveFunctionTokens.ARITHMETIC))
         else:
-            print("token not recognized")
+            print("token not recognized: {token}".format(token=token))
     
     if len(openParenStack) > 0:
         print("ERROR: Unclosed parenthesis")
@@ -729,6 +729,11 @@ class TestQuantumHelpers(unittest.TestCase):
         tokens = ["(", "Exp", "2", ")", "|0>"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.e**2 * buildKet("|0>"))
+
+    def test_buildWaveFunctionComplexScalar(self):
+        tokens = [str(np.pi * 1j), "|0>"]
+        rtnPsi = buildWaveFunction(tokens)
+        self.compareVectors(rtnPsi[0], np.array([np.pi * 1j, 0]))
     
 
 
