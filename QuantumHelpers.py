@@ -21,7 +21,7 @@ cNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
 cZ = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]])
 hadamard = (1 / np.sqrt(2)) * np.array([[1,1],[1,-1]])
 
-singleNumArithmetic = ["√","Sr","Exp"]
+singleNumArithmetic = ["√","Sr","Exp", "Prob"]
 
 def buildKet(aKet):
     # Verify input has the correct format
@@ -288,7 +288,7 @@ def buildWaveFunction(tokens):
     scalarPattern = r"^[0-9,.,j]+$"
     parenPattern = r"^[(,)]$"
     endTermPattern = r"^[+,-]$"
-    arithmaticPattern = r"^[*,/,√]$|^Sr$|^Exp$"
+    arithmaticPattern = r"^[*,/,√]$|^Sr$|^Exp$|^Prob$"
 
     openParenStack = []
     overallStack = []
@@ -513,6 +513,9 @@ def evaluateImplicit(left, right):
         if left[0] == "Exp":
             if right[1] == WaveFunctionTokens.SCALAR:
                 return (np.e**(right[0]), WaveFunctionTokens.SCALAR)
+        if left[0] == "Prob":
+            if right[1] == WaveFunctionTokens.SCALAR:
+                return (right[0] * np.conj(right[0]), WaveFunctionTokens.SCALAR)
     
     print("Something was not handled, evaluateImplicit. Left:{l} Right:{r}".format(l=str(left), r=str(right)))
 
@@ -736,6 +739,13 @@ class TestQuantumHelpers(unittest.TestCase):
         tokens = [str(np.pi * 1j), "|0>"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi[0], np.array([np.pi * 1j, 0]))
+
+    def test_buildWaveFunctionProb(self):
+        testPsiString = "Prob(<0|((1/Sr(2))(|0> + |1>)))"
+        tokens = tokenizeWaveFunctionString(testPsiString)
+        rtnProb = buildWaveFunction(tokens)
+        self.assertEqual(WaveFunctionTokens.SCALAR, rtnProb[1])
+        self.assertAlmostEqual(0.5, rtnProb[0])
     
 
 
