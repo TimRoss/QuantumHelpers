@@ -32,7 +32,7 @@ def buildKet(aKet):
     # Goes through each character from the argument excluding the start and end characters
     for i in aKet[1:-1]:
         localKet = np.kron(localKet, unitKets[int(i)])
-    return localKet
+    return (localKet, WaveFunctionTokens.KET)
 
 def buildBra(aBra):
     # Verify input has the correct format
@@ -43,7 +43,7 @@ def buildBra(aBra):
     # Goes through each character from the argument excluding the start and end characters
     for i in aBra[1:-1]:
         localBra = np.kron(localBra, unitKets[int(i)])
-    return localBra
+    return (localBra, WaveFunctionTokens.BRA)
 
 def printStates(aKet):
     numberOfQubits = int(np.log2(aKet.size))
@@ -205,8 +205,8 @@ def prettyFraction(n) -> str:
 vPrettyFraction = np.vectorize(prettyFraction)
 
 def makeControlGate(gate, controlPosition):
-    zeroState = np.outer(buildKet("|0>"), buildBra("<0|"))
-    oneState = np.outer(buildKet("|1>"), buildBra("<1|"))
+    zeroState = np.outer(buildKet("|0>")[0], buildBra("<0|")[0])
+    oneState = np.outer(buildKet("|1>")[0], buildBra("<1|")[0])
 
     if controlPosition == 0:
         return np.kron(zeroState, np.eye(2)) + np.kron(oneState, gate)
@@ -329,10 +329,12 @@ def buildWaveFunction(tokens):
                 print("ERROR: Unrecognized Operator: " + token)
         elif re.search(ketPattern, token):
             if DEBUG: print("ket")
-            currentTermStack.append((buildKet(token), WaveFunctionTokens.KET))
+            # buildKet function will return tuple with type
+            currentTermStack.append(buildKet(token))
         elif re.search(braPattern, token):
             if DEBUG: print("bra")
-            currentTermStack.append((buildBra(token), WaveFunctionTokens.BRA))
+            # buildBra function will return tuple with type
+            currentTermStack.append(buildBra(token))
         elif re.search(scalarPattern, token):
             if DEBUG: print("scalar")
             currentTermStack.append((complex(token), WaveFunctionTokens.SCALAR))
@@ -723,12 +725,12 @@ class TestQuantumHelpers(unittest.TestCase):
         testPsiString = "((IX)|10>)|0>"
         tokens = tokenizeWaveFunctionString(testPsiString)
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi[0], buildKet("|110>"))
+        self.compareVectors(rtnPsi[0], buildKet("|110>")[0])
 
     def test_buildWaveFunctionExponential(self):
         tokens = ["(", "Exp", "2", ")", "|0>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi[0], np.e**2 * buildKet("|0>"))
+        self.compareVectors(rtnPsi[0], np.e**2 * buildKet("|0>")[0])
 
     def test_buildWaveFunctionComplexScalar(self):
         tokens = [str(np.pi * 1j), "|0>"]
