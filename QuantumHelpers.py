@@ -850,6 +850,117 @@ class TestQuantumHelpers(unittest.TestCase):
         rtnProb = buildWaveFunction(tokens)
         self.assertEqual(WaveFunctionTokens.SCALAR, rtnProb[1])
         self.assertAlmostEqual(0.5, rtnProb[0])
+
+    def test_QEAddBraBra(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
+        y = QuantumElement(np.array([0,1]), WaveFunctionTokens.BRA)
+        z = x + y
+        self.compareVectors(z.data, np.array([1,1]))
+        self.assertEqual(z.type, WaveFunctionTokens.BRA)
+    
+    def test_QEAddKetKet(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
+        y = QuantumElement(np.array([0,1]), WaveFunctionTokens.KET)
+        z = x + y
+        self.compareVectors(z.data, np.array([1,1]))
+        self.assertEqual(z.type, WaveFunctionTokens.KET)
+    
+    def test_QEAddOpOp(self):
+        x = QuantumElement(np.array([[1,0],[0,-1]]), WaveFunctionTokens.OPERATOR)
+        y = QuantumElement(np.array([[1,0],[0,1]]), WaveFunctionTokens.OPERATOR)
+        z = x + y
+        self.compareMatricies(z.data, np.array([[2,0],[0,0]]))
+        self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
+
+    def test_QEAddMismatch(self):
+        x = QuantumElement(np.array([[1,0]]), WaveFunctionTokens.KET)
+        y = QuantumElement(np.array([[1,0],[0,1]]), WaveFunctionTokens.OPERATOR)
+        z = x + y
+        self.assertEqual(z, None)
+
+    def test_QESubBraBra(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
+        y = QuantumElement(np.array([0,1]), WaveFunctionTokens.BRA)
+        z = x - y
+        self.compareVectors(z.data, np.array([1,-1]))
+        self.assertEqual(z.type, WaveFunctionTokens.BRA)
+    
+    def test_QESubKetKet(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
+        y = QuantumElement(np.array([0,1]), WaveFunctionTokens.KET)
+        z = x - y
+        self.compareVectors(z.data, np.array([1,-1]))
+        self.assertEqual(z.type, WaveFunctionTokens.KET)
+    
+    def test_QESubOpOp(self):
+        x = QuantumElement(np.array([[1,0],[0,-1]]), WaveFunctionTokens.OPERATOR)
+        y = QuantumElement(np.array([[1,0],[0,1]]), WaveFunctionTokens.OPERATOR)
+        z = x - y
+        self.compareMatricies(z.data, np.array([[0,0],[0,-2]]))
+        self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
+
+    def test_QESubMismatch(self):
+        x = QuantumElement(np.array([[1,0]]), WaveFunctionTokens.KET)
+        y = QuantumElement(np.array([[1,0],[0,1]]), WaveFunctionTokens.OPERATOR)
+        z = x - y
+        self.assertEqual(z, None)
+
+    def test_QEMulOpFloat(self):
+        x = QuantumElement(np.array([[1,0],[0,1]]), WaveFunctionTokens.OPERATOR)
+        z = x * 5
+        self.compareMatricies(z.data, np.array([[5,0],[0,5]]))
+        self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
+
+    def test_QEMulBraBra(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
+        y = QuantumElement(np.array([0,1]), WaveFunctionTokens.BRA)
+        z = x * y
+        self.compareVectors(z.data, np.array([0,1,0,0]))
+        self.assertEqual(z.type, WaveFunctionTokens.BRA)
+
+    def test_QEMulBraKet(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
+        y = QuantumElement(np.array([1/np.sqrt(2),1/np.sqrt(2)]), WaveFunctionTokens.KET)
+        z = x * y
+        self.assertEqual(z.data, 1/np.sqrt(2))
+        self.assertEqual(z.type, WaveFunctionTokens.SCALAR)
+    
+    def test_QEMulBraOp(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
+        y = QuantumElement(np.array([[1,3],[2,1]]), WaveFunctionTokens.OPERATOR)
+        z = x * y
+        self.compareVectors(z.data, np.array([1,3]))
+        self.assertEqual(z.type, WaveFunctionTokens.BRA)
+
+    def test_QEMulKetBra(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
+        y = QuantumElement(np.array([0,1]), WaveFunctionTokens.BRA)
+        z = x * y
+        self.compareMatricies(z.data, np.array([[0,1],[0,0]]))
+        self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
+
+    def test_QEMulKetKet(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
+        y = QuantumElement(np.array([0,1]), WaveFunctionTokens.KET)
+        z = x * y
+        self.compareVectors(z.data, np.array([0,1,0,0]))
+        self.assertEqual(z.type, WaveFunctionTokens.KET)
+    
+    def test_QEOpKet(self):
+        x = QuantumElement(np.array([[0,1],[1,0]]), WaveFunctionTokens.OPERATOR)
+        y = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
+        z = x * y
+        self.compareVectors(z.data, np.array([0,1]))
+        self.assertEqual(z.type, WaveFunctionTokens.KET)
+
+    def test_QEMulOpOp(self):
+        x = QuantumElement(np.array([[1,2],[0,1]]), WaveFunctionTokens.OPERATOR)
+        y = QuantumElement(np.array([[1,3],[2,1]]), WaveFunctionTokens.OPERATOR)
+        z = x * y
+        self.compareMatricies(z.data, np.array([[5,5],[2,1]]))
+        self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
+
+
     
 
 
