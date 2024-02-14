@@ -272,6 +272,90 @@ class WaveFunctionTokens(Enum):
     SCALAR = 4
     ARITHMETIC = 5
 
+class QuantumElement():
+    data = []
+    type : WaveFunctionTokens
+
+    def __init__(self, data, type: WaveFunctionTokens) -> None:
+        self.data = data
+        self.type = type
+                    
+    def __add__(self, other):
+        if self.type == other.type:
+            return QuantumElement(self.data + other.data, self.type)
+        else:
+            self.printError(other, "add")
+    
+    def __sub__(self, other):
+        if self.type == other.type:
+            return QuantumElement(self.data - other.data, self.type)
+        else:
+            self.printError(other, "subtract")
+
+    def __mul__(self, other):
+        # Some quick logic to handle scalars because it is simple
+        if self.type == WaveFunctionTokens.SCALAR:
+            return QuantumElement(self.data * other.data, other.type)
+        elif other.type == WaveFunctionTokens.SCALAR:
+            return QuantumElement(self.data * other.data, self.type)
+        
+        match self.type:
+            case WaveFunctionTokens.BRA:
+                match other.type:
+                    case WaveFunctionTokens.BRA:
+                        return self & other
+                    case WaveFunctionTokens.KET:
+                        return QuantumElement(np.inner(self.data, other.data), WaveFunctionTokens.SCALAR)
+                    case WaveFunctionTokens.OPERATOR:
+                        return QuantumElement(self.data @ other.data, WaveFunctionTokens.BRA)
+                    case _:
+                        return self.printError(other, "multiply")
+            case WaveFunctionTokens.KET:
+                match other.type:
+                    case WaveFunctionTokens.BRA:
+                        return QuantumElement(np.outer(self.data, other.data), WaveFunctionTokens.OPERATOR)
+                    case WaveFunctionTokens.KET:
+                        return self & other
+                    case _:
+                        return self.printError(other, "multiply") 
+            case WaveFunctionTokens.OPERATOR:
+                match other.type:
+                    case WaveFunctionTokens.KET:
+                        return QuantumElement(self.data @ other.data, WaveFunctionTokens.KET)
+                    case WaveFunctionTokens.OPERATOR:
+                        return QuantumElement(self.data @ other.data, WaveFunctionTokens.OPERATOR)
+                    case _:
+                        return self.printError(other, "multiply")
+            case _:
+                return self.printError(other, "multiply")
+    
+    def __truediv__(self, other):
+        # Division is only supported with scalars
+        if self.type == WaveFunctionTokens.SCALAR:
+            return QuantumElement(self.data / other.data, other.type)
+        elif other.type == WaveFunctionTokens.SCALAR:
+            return QuantumElement(self.data / other.data, self.type)
+        else:
+            self.printError(other, "divide")
+    
+    def __and__(self, other):
+        # Since python does not have a kron, use & as kron symbol
+        if self.type == other.type and \
+            self.type in [WaveFunctionTokens.BRA, WaveFunctionTokens.KET, WaveFunctionTokens.OPERATOR]:
+            return QuantumElement(np.kron(self.data, other.data), self.type)
+        else:
+            self.printError(other, "kron")
+
+    def printError(self, other, operation):
+        print( "Cannot {operation} {s} and {o}".format(
+            operation=operation,s=self.type.name, o=other.type.name))
+
+def testAdd():
+    x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
+    y = QuantumElement(np.array([0,1]), WaveFunctionTokens.BRA)
+    return x + y
+
+
 operators = {
     "X": pauli_X,
     "Y": pauli_Y,
