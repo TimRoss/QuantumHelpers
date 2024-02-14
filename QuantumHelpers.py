@@ -350,9 +350,7 @@ class QuantumElement():
             return self.printNotSupported()
 
         # Division is only supported with scalars
-        if self.type == WaveFunctionTokens.SCALAR:
-            return QuantumElement(self.data / other.data, other.type)
-        elif other.type == WaveFunctionTokens.SCALAR:
+        if other.type == WaveFunctionTokens.SCALAR:
             return QuantumElement(self.data / other.data, self.type)
         else:
             self.printError(other, "divide")
@@ -960,6 +958,19 @@ class TestQuantumHelpers(unittest.TestCase):
         self.compareMatricies(z.data, np.array([[5,5],[2,1]]))
         self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
 
+    def test_QEdivOpFloat(self):
+        x = QuantumElement(np.array([[1,0],[0,1]]), WaveFunctionTokens.OPERATOR)
+        y = np.sqrt(2)
+        z = x / y
+        self.compareMatricies(z.data, np.array([[1/np.sqrt(2),0],[0,1/np.sqrt(2)]]))
+        self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
+
+    def test_QEkronOpOp(self):
+        x = QuantumElement(np.array([[1,0],[0,1]]), WaveFunctionTokens.OPERATOR)
+        y = QuantumElement(np.array([[0,1],[1,0]]), WaveFunctionTokens.OPERATOR)
+        z = x & y
+        self.compareMatricies(z.data, np.array([[0,1,0,0],[1,0,0,0],[0,0,0,1],[0,0,1,0]]))
+        self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
 
     
 
