@@ -28,7 +28,7 @@ def buildKet(aKet):
     if not re.match("^|[0-1]+>", aKet):
         print("Argument passed to buildKet does not match expected ket format.")
         return -1
-    localKet = 1
+    localKet = 1 + 0j
     # Goes through each character from the argument excluding the start and end characters
     for i in aKet[1:-1]:
         localKet = np.kron(localKet, unitKets[int(i)])
@@ -39,7 +39,7 @@ def buildBra(aBra):
     if not re.match("^<[0-1]+|", aBra):
         print("Argument passed to buildKet does not match expected ket format.")
         return -1
-    localBra = 1
+    localBra = 1 + 0j
     # Goes through each character from the argument excluding the start and end characters
     for i in aBra[1:-1]:
         localBra = np.kron(localBra, unitKets[int(i)])
@@ -128,7 +128,7 @@ def findFraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, i
     if p < 1 + tolerance and p > 1 - tolerance:
         return (1, 1) if not isComplex else (1, 1, imagNumerator, imagDenominator)
     
-    # Brute force check every possible numerator for each denominator between 0 and maxDenom--**************+**+++*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # Brute force check every possible numerator for each denominator between 0 and maxDenom
     for denom in range(1, maxDenom + 1):
         if numerator != 0: break
         for numer in reversed(range(1, denom)):
