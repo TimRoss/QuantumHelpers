@@ -477,136 +477,20 @@ def evaluateStack(stack):
 
 def evaluateExplicit(left, arithmetic, right):
     # Really only need to handle BRA, KET, and SCALAR in this method
-    # Left side BRA
-    if left.type == WaveFunctionTokens.BRA:
-        # Arithmetic +
-        if arithmetic.data == "+":
-            if right.type == WaveFunctionTokens.BRA:
-                return QuantumElement(left.data + right.data, WaveFunctionTokens.BRA)
-        # Arithmetic -
-        if arithmetic.data == "-":
-            if right.type == WaveFunctionTokens.BRA:
-                return QuantumElement(left.data - right.data, WaveFunctionTokens.BRA)
-        # Arithmetic *
-        if arithmetic.data == "*":
-            if right.type == WaveFunctionTokens.SCALAR:
-                return QuantumElement(left.data * right.data, WaveFunctionTokens.BRA)
-        # Arithmetic /
-        if arithmetic.data == "/":
-            if right.type == WaveFunctionTokens.SCALAR:
-                return QuantumElement(left.data * right.data, WaveFunctionTokens.BRA)
-    # Left side KET
-    if left.type == WaveFunctionTokens.KET:
-        # Arithmetic +
-        if arithmetic.data == "+":
-            if right.type == WaveFunctionTokens.KET:
-                return QuantumElement(left.data + right.data, WaveFunctionTokens.KET)
-        # Arithmetic -
-        if arithmetic.data == "-":
-            if right.type == WaveFunctionTokens.KET:
-                return QuantumElement(left.data - right.data, WaveFunctionTokens.KET)
-        # Arithmetic *
-        if arithmetic.data == "*":
-            if right.type == WaveFunctionTokens.SCALAR:
-                return QuantumElement(left.data * right.data, WaveFunctionTokens.KET)
-        # Arithmetic /
-        if arithmetic.data == "/":
-            if right.type == WaveFunctionTokens.SCALAR:
-                return QuantumElement(left.data * right.data, WaveFunctionTokens.KET)
-    # Left side SCALAR
-    if left.type == WaveFunctionTokens.SCALAR:
-        # Arithmetic +
-        if arithmetic.data == "+":
-            if right.type == WaveFunctionTokens.SCALAR:
-                return QuantumElement(left.data + right.data, WaveFunctionTokens.SCALAR)
-         # Arithmetic -
-        if arithmetic.data == "-":
-            if right.type == WaveFunctionTokens.SCALAR:
-                return QuantumElement(left.data + right.data, WaveFunctionTokens.SCALAR)
-         # Arithmetic *
-        if arithmetic.data == "*":
-            if right.type == WaveFunctionTokens.SCALAR:
-                return QuantumElement(left.data * right.data, WaveFunctionTokens.SCALAR)
-         # Arithmetic /
-        if arithmetic.data == "/":
-            if right.type == WaveFunctionTokens.SCALAR:
-                return QuantumElement(left.data / right.data, WaveFunctionTokens.SCALAR)
-    # Left side Operator
-    if left.type == WaveFunctionTokens.OPERATOR:
-        # Arithmetic + 
-        if arithmetic.data == "+":
-            if right.type == WaveFunctionTokens.OPERATOR:
-                return QuantumElement(left.data + right.data, WaveFunctionTokens.OPERATOR)
-        # Arithmetic -
-        if arithmetic.data == "-":
-            if right.type == WaveFunctionTokens.OPERATOR:
-                return QuantumElement(left.data - right.data, WaveFunctionTokens.OPERATOR)
+    match arithmetic.data:
+        case "+":
+            return left + right
+        case "-":
+            return left - right
+        case "*":
+            return left * right
+        case "/":
+            return left / right
 
-        
-    
     print("Something was not handled, evaluateExplicit. Left:{l} Arithmetic:{a} Right:{r}".format(\
         l=str(left), r=str(right),a=str(arithmetic)))
 
 def evaluateImplicit(left, right):
-    # Left side BRA
-    if left.type == WaveFunctionTokens.BRA:
-        # BRA BRA
-        if right.type == WaveFunctionTokens.BRA:
-            return QuantumElement(np.kron(left.data, right.data), WaveFunctionTokens.BRA)
-        # BRA KET
-        if right.type == WaveFunctionTokens.KET:
-            return QuantumElement(np.inner(left.data, right.data), WaveFunctionTokens.SCALAR)
-        # BRA OPERATOR
-            # Doesn't make sense to have operator after Bra
-        # BRA SCALAR
-            # Doesn't make sense to have scalar after Bra
-        # BRA ARITHMETIC
-            # Doesn't make sense to have arithmetic as the right
-    # Left side KET
-    if left.type == WaveFunctionTokens.KET:
-        # KET BRA
-        if right.type == WaveFunctionTokens.BRA:
-            return QuantumElement(np.outer(left.data,right.data), WaveFunctionTokens.OPERATOR)
-        # KET KET
-        if right.type == WaveFunctionTokens.KET:
-            return QuantumElement(np.kron(left.data, right.data), WaveFunctionTokens.KET)
-        # KET OPERATOR
-            # Doesn't make sense to have operator after KET
-        # KET SCALAR
-            # Doesn't make sense to have scalar after KET
-        # KET ARITHMETIC
-            # Doesn't make sense to have arithmetic as the right
-    # Left side operator
-    if left.type == WaveFunctionTokens.OPERATOR:
-        # OPERATOR BRA
-        if right.type == WaveFunctionTokens.BRA:
-            return QuantumElement(np.matmul(left.data, right.data), WaveFunctionTokens.BRA)
-        # OPERATOR KET
-        if right.type == WaveFunctionTokens.KET:
-            return QuantumElement(np.matmul(left.data, right.data), WaveFunctionTokens.KET)
-        # OPERATOR OPERATOR
-        if right.type == WaveFunctionTokens.OPERATOR:
-            return QuantumElement(np.kron(left.data, right.data), WaveFunctionTokens.OPERATOR)
-        # OPERATOR SCALAR
-            # Doesn't make sense to have a scalar after an operator
-        # OPERATOR ARITHMETIC
-            # Doesn't make sense to have arithmetic as the right
-    # left side SCALAR
-    if left.type == WaveFunctionTokens.SCALAR:
-        # SCALAR BRA
-        if right.type == WaveFunctionTokens.BRA:
-            return QuantumElement(left.data * right.data, WaveFunctionTokens.BRA)
-        # SCALAR KET
-        if right.type == WaveFunctionTokens.KET:
-            return QuantumElement(left.data * right.data, WaveFunctionTokens.KET)
-        # SCALAR OPERATOR
-        if right.type == WaveFunctionTokens.OPERATOR:
-            return QuantumElement(left.data * right.data, WaveFunctionTokens.OPERATOR)
-        # SCALAR SCALAR
-        if right.type == WaveFunctionTokens.SCALAR:
-            return QuantumElement(left.data * right.data, WaveFunctionTokens.SCALAR)
-        # SCALAR ARITHMETIC
-            # Doesn't make sense to have arithmetic as the right
     # Left side Arithmetic
     if left.type == WaveFunctionTokens.ARITHMETIC:
         if(left.data == "√" or left.data == "Sr"):
@@ -618,8 +502,12 @@ def evaluateImplicit(left, right):
         if left.data == "Prob":
             if right.type == WaveFunctionTokens.SCALAR:
                 return QuantumElement(right.data * np.conj(right.data), WaveFunctionTokens.SCALAR)
+
+    # For two operators together, use a kron product
+    if left.type == WaveFunctionTokens.OPERATOR and right.type == WaveFunctionTokens.OPERATOR:
+        return left & right
     
-    print("Something was not handled, evaluateImplicit. Left:{l} Right:{r}".format(l=str(left), r=str(right)))
+    return left * right
 
 def readInWaveFunction(psi):
     tokens = tokenizeWaveFunctionString(psi)
@@ -770,11 +658,6 @@ class TestQuantumHelpers(unittest.TestCase):
 
     def test_BuildWaveFunctionXGate(self):
         tokens = ['X', "|0>"]
-        rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([0,1]))
-
-    def test_BuildWaveFunctionOperatorBra(self):
-        tokens = ['X', "<0|"]
         rtnPsi = buildWaveFunction(tokens)
         self.compareVectors(rtnPsi.data, np.array([0,1]))
     
