@@ -1,5 +1,6 @@
 import numpy as np
 import re
+import numbers
 import unittest
 from enum import Enum
 
@@ -281,18 +282,30 @@ class QuantumElement():
         self.type = type
                     
     def __add__(self, other):
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+        
         if self.type == other.type:
             return QuantumElement(self.data + other.data, self.type)
         else:
             self.printError(other, "add")
     
     def __sub__(self, other):
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+        
         if self.type == other.type:
             return QuantumElement(self.data - other.data, self.type)
         else:
             self.printError(other, "subtract")
 
     def __mul__(self, other):
+        # Support multiplying by a normal number
+        if isinstance(other, numbers.Number):
+            return QuantumElement(self.data * other, self.type)
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+
         # Some quick logic to handle scalars because it is simple
         if self.type == WaveFunctionTokens.SCALAR:
             return QuantumElement(self.data * other.data, other.type)
@@ -330,6 +343,12 @@ class QuantumElement():
                 return self.printError(other, "multiply")
     
     def __truediv__(self, other):
+        # Support dividing by a normal number
+        if isinstance(other, numbers.Number):
+            return QuantumElement(self.data / other, self.type)
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+
         # Division is only supported with scalars
         if self.type == WaveFunctionTokens.SCALAR:
             return QuantumElement(self.data / other.data, other.type)
@@ -339,6 +358,9 @@ class QuantumElement():
             self.printError(other, "divide")
     
     def __and__(self, other):
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+
         # Since python does not have a kron, use & as kron symbol
         if self.type == other.type and \
             self.type in [WaveFunctionTokens.BRA, WaveFunctionTokens.KET, WaveFunctionTokens.OPERATOR]:
@@ -349,11 +371,9 @@ class QuantumElement():
     def printError(self, other, operation):
         print( "Cannot {operation} {s} and {o}".format(
             operation=operation,s=self.type.name, o=other.type.name))
-
-def testAdd():
-    x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
-    y = QuantumElement(np.array([0,1]), WaveFunctionTokens.BRA)
-    return x + y
+        
+    def printNotSupported(self):
+        print("Operation with non-QuantumElement object not supported.")
 
 
 operators = {
