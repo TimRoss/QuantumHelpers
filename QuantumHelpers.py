@@ -22,7 +22,139 @@ cNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
 cZ = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]])
 hadamard = (1 / np.sqrt(2)) * np.array([[1,1],[1,-1]])
 
+operators = {
+    "X": pauli_X,
+    "Y": pauli_Y,
+    "Z": pauli_Z,
+    "H": hadamard,
+    "I": np.eye(2),
+    "Cnot": cNOT
+}
+
 singleNumArithmetic = ["√","Sr","Exp", "Prob"]
+
+class WaveFunctionTokens(Enum):
+    BRA = 1
+    KET = 2
+    OPERATOR = 3
+    SCALAR = 4
+    ARITHMETIC = 5
+
+class QuantumElement():
+    data = []
+    type : WaveFunctionTokens
+
+    def __init__(self, data, type: WaveFunctionTokens) -> None:
+        self.data = data
+        self.type = type
+                    
+    def __add__(self, other):
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+        
+        if self.type == other.type:
+            return QuantumElement(self.data + other.data, self.type)
+        else:
+            self.printError(other, "add")
+    
+    def __sub__(self, other):
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+        
+        if self.type == other.type:
+            return QuantumElement(self.data - other.data, self.type)
+        else:
+            self.printError(other, "subtract")
+
+    def __mul__(self, other):
+        # Support multiplying by a normal number
+        if isinstance(other, numbers.Number):
+            return QuantumElement(self.data * other, self.type)
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+
+        # Some quick logic to handle scalars because it is simple
+        if self.type == WaveFunctionTokens.SCALAR:
+            return QuantumElement(self.data * other.data, other.type)
+        elif other.type == WaveFunctionTokens.SCALAR:
+            return QuantumElement(self.data * other.data, self.type)
+        
+        match self.type:
+            case WaveFunctionTokens.BRA:
+                match other.type:
+                    case WaveFunctionTokens.BRA:
+                        return self & other
+                    case WaveFunctionTokens.KET:
+                        return QuantumElement(np.inner(self.data, other.data), WaveFunctionTokens.SCALAR)
+                    case WaveFunctionTokens.OPERATOR:
+                        return QuantumElement(self.data @ other.data, WaveFunctionTokens.BRA)
+                    case _:
+                        return self.printError(other, "multiply")
+            case WaveFunctionTokens.KET:
+                match other.type:
+                    case WaveFunctionTokens.BRA:
+                        return QuantumElement(np.outer(self.data, other.data), WaveFunctionTokens.OPERATOR)
+                    case WaveFunctionTokens.KET:
+                        return self & other
+                    case _:
+                        return self.printError(other, "multiply") 
+            case WaveFunctionTokens.OPERATOR:
+                match other.type:
+                    case WaveFunctionTokens.KET:
+                        return QuantumElement(self.data @ other.data, WaveFunctionTokens.KET)
+                    case WaveFunctionTokens.OPERATOR:
+                        return QuantumElement(self.data @ other.data, WaveFunctionTokens.OPERATOR)
+                    case _:
+                        return self.printError(other, "multiply")
+            case _:
+                return self.printError(other, "multiply")
+    
+    def __truediv__(self, other):
+        # Support dividing by a normal number
+        if isinstance(other, numbers.Number):
+            return QuantumElement(self.data / other, self.type)
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+
+        # Division is only supported with scalars
+        if other.type == WaveFunctionTokens.SCALAR:
+            return QuantumElement(self.data / other.data, self.type)
+        else:
+            self.printError(other, "divide")
+    
+    def __and__(self, other):
+        if not isinstance(other, QuantumElement):
+            return self.printNotSupported()
+
+        # Since python does not have a kron, use & as kron symbol
+        if self.type == other.type and \
+            self.type in [WaveFunctionTokens.BRA, WaveFunctionTokens.KET, WaveFunctionTokens.OPERATOR]:
+            return QuantumElement(np.kron(self.data, other.data), self.type)
+        else:
+            self.printError(other, "kron")
+
+    def printError(self, other, operation):
+        print( "Cannot {operation} {s} and {o}".format(
+            operation=operation,s=self.type.name, o=other.type.name))
+        
+    def printNotSupported(self):
+        print("Operation with non-QuantumElement object not supported.")
+
+    def __str__(self):
+        match self.type:
+            case WaveFunctionTokens.BRA:
+                return str(vPrettyWaveFunctionAmplitude(self.data)).replace("'","")
+            case WaveFunctionTokens.KET:
+                return str(vPrettyWaveFunctionAmplitude(np.reshape(self.data, (len(self.data),1)))).replace("'","")
+            case WaveFunctionTokens.OPERATOR:
+                return str(vPrettyWaveFunctionAmplitude(self.data)).replace("'","")
+            case WaveFunctionTokens.SCALAR:
+                return str(prettyWaveFunctionAmplitude(self.data)).replace("'","")
+            case WaveFunctionTokens.ARITHMETIC:
+                return self.data
+            case _:
+                return "Type: {type} to string not implemented".format(type=type)
+
 
 def buildKet(aKet):
     # Verify input has the correct format
@@ -295,138 +427,6 @@ def tokenizeWaveFunctionString(stringstrong):
         tokens.append(currentToken)
     return tokens
 
-class WaveFunctionTokens(Enum):
-    BRA = 1
-    KET = 2
-    OPERATOR = 3
-    SCALAR = 4
-    ARITHMETIC = 5
-
-class QuantumElement():
-    data = []
-    type : WaveFunctionTokens
-
-    def __init__(self, data, type: WaveFunctionTokens) -> None:
-        self.data = data
-        self.type = type
-                    
-    def __add__(self, other):
-        if not isinstance(other, QuantumElement):
-            return self.printNotSupported()
-        
-        if self.type == other.type:
-            return QuantumElement(self.data + other.data, self.type)
-        else:
-            self.printError(other, "add")
-    
-    def __sub__(self, other):
-        if not isinstance(other, QuantumElement):
-            return self.printNotSupported()
-        
-        if self.type == other.type:
-            return QuantumElement(self.data - other.data, self.type)
-        else:
-            self.printError(other, "subtract")
-
-    def __mul__(self, other):
-        # Support multiplying by a normal number
-        if isinstance(other, numbers.Number):
-            return QuantumElement(self.data * other, self.type)
-        if not isinstance(other, QuantumElement):
-            return self.printNotSupported()
-
-        # Some quick logic to handle scalars because it is simple
-        if self.type == WaveFunctionTokens.SCALAR:
-            return QuantumElement(self.data * other.data, other.type)
-        elif other.type == WaveFunctionTokens.SCALAR:
-            return QuantumElement(self.data * other.data, self.type)
-        
-        match self.type:
-            case WaveFunctionTokens.BRA:
-                match other.type:
-                    case WaveFunctionTokens.BRA:
-                        return self & other
-                    case WaveFunctionTokens.KET:
-                        return QuantumElement(np.inner(self.data, other.data), WaveFunctionTokens.SCALAR)
-                    case WaveFunctionTokens.OPERATOR:
-                        return QuantumElement(self.data @ other.data, WaveFunctionTokens.BRA)
-                    case _:
-                        return self.printError(other, "multiply")
-            case WaveFunctionTokens.KET:
-                match other.type:
-                    case WaveFunctionTokens.BRA:
-                        return QuantumElement(np.outer(self.data, other.data), WaveFunctionTokens.OPERATOR)
-                    case WaveFunctionTokens.KET:
-                        return self & other
-                    case _:
-                        return self.printError(other, "multiply") 
-            case WaveFunctionTokens.OPERATOR:
-                match other.type:
-                    case WaveFunctionTokens.KET:
-                        return QuantumElement(self.data @ other.data, WaveFunctionTokens.KET)
-                    case WaveFunctionTokens.OPERATOR:
-                        return QuantumElement(self.data @ other.data, WaveFunctionTokens.OPERATOR)
-                    case _:
-                        return self.printError(other, "multiply")
-            case _:
-                return self.printError(other, "multiply")
-    
-    def __truediv__(self, other):
-        # Support dividing by a normal number
-        if isinstance(other, numbers.Number):
-            return QuantumElement(self.data / other, self.type)
-        if not isinstance(other, QuantumElement):
-            return self.printNotSupported()
-
-        # Division is only supported with scalars
-        if other.type == WaveFunctionTokens.SCALAR:
-            return QuantumElement(self.data / other.data, self.type)
-        else:
-            self.printError(other, "divide")
-    
-    def __and__(self, other):
-        if not isinstance(other, QuantumElement):
-            return self.printNotSupported()
-
-        # Since python does not have a kron, use & as kron symbol
-        if self.type == other.type and \
-            self.type in [WaveFunctionTokens.BRA, WaveFunctionTokens.KET, WaveFunctionTokens.OPERATOR]:
-            return QuantumElement(np.kron(self.data, other.data), self.type)
-        else:
-            self.printError(other, "kron")
-
-    def printError(self, other, operation):
-        print( "Cannot {operation} {s} and {o}".format(
-            operation=operation,s=self.type.name, o=other.type.name))
-        
-    def printNotSupported(self):
-        print("Operation with non-QuantumElement object not supported.")
-
-    def __str__(self):
-        match self.type:
-            case WaveFunctionTokens.BRA:
-                return str(vPrettyWaveFunctionAmplitude(self.data)).replace("'","")
-            case WaveFunctionTokens.KET:
-                return str(vPrettyWaveFunctionAmplitude(np.reshape(self.data, (len(self.data),1)))).replace("'","")
-            case WaveFunctionTokens.OPERATOR:
-                return str(vPrettyWaveFunctionAmplitude(self.data)).replace("'","")
-            case WaveFunctionTokens.SCALAR:
-                return str(prettyWaveFunctionAmplitude(self.data)).replace("'","")
-            case WaveFunctionTokens.ARITHMETIC:
-                return self.data
-            case _:
-                return "Type: {type} to string not implemented".format(type=type)
-
-
-operators = {
-    "X": pauli_X,
-    "Y": pauli_Y,
-    "Z": pauli_Z,
-    "H": hadamard,
-    "I": np.eye(2),
-    "Cnot": cNOT
-}
-
 def evalWaveFunction(psi: str) -> QuantumElement:
     tokens = tokenizeWaveFunctionString(psi)
     return buildWaveFunction(tokens)
@@ -561,6 +561,8 @@ def readInWaveFunction(psi):
     tokens = tokenizeWaveFunctionString(psi)
     evaluatedPsi = buildWaveFunction(tokens)
     return toString(evaluatedPsi.data)
+
+
 
 # -------------------- UNIT TESTS --------------------
 
