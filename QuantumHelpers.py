@@ -152,7 +152,8 @@ def prettyWaveFunctionAmplitude(n) -> str:
     # n can be float or complex float
     tolerance = 1e-8
     sqrtSymbol = "\u221A"
-    numerator, denominator = findFraction(n * np.conj(n))
+
+    numerator, denominator = findFraction((n * np.conj(n)).real)
     
     # If a fraction for the number cannot be found
     if denominator == 0:
@@ -160,7 +161,7 @@ def prettyWaveFunctionAmplitude(n) -> str:
     if numerator / denominator < tolerance:
         return "0"
     if numerator / denominator > (1 - tolerance) and numerator / denominator < (1 + tolerance):
-        if n < 0:
+        if numerator < 0:
             return "-1"
         return "1"
     
@@ -174,7 +175,7 @@ def prettyWaveFunctionAmplitude(n) -> str:
     numeratorString = str(int(np.sqrt(numerator))) if numeratorIsRootable else sqrtSymbol + str(int(numerator))
     denominatorString = str(int(np.sqrt(denominator))) if denominatorIsRootable else sqrtSymbol + str(int(denominator))
 
-    if n < 0:
+    if n.real < 0:
         numeratorString = "-" + numeratorString
 
     return "{n}/{d}".format(n=numeratorString, d=denominatorString)
@@ -373,6 +374,21 @@ class QuantumElement():
     def printNotSupported(self):
         print("Operation with non-QuantumElement object not supported.")
 
+    def __str__(self):
+        match self.type:
+            case WaveFunctionTokens.BRA:
+                return str(vPrettyWaveFunctionAmplitude(np.reshape(self.data, (len(self.data),1))))
+            case WaveFunctionTokens.KET:
+                return str(vPrettyWaveFunctionAmplitude(self.data))
+            case WaveFunctionTokens.OPERATOR:
+                return str(vPrettyWaveFunctionAmplitude(self.data))
+            case WaveFunctionTokens.SCALAR:
+                return str(prettyWaveFunctionAmplitude(self.data))
+            case WaveFunctionTokens.ARITHMETIC:
+                return self.data
+            case _:
+                return "Type: {type} to string not implemented".format(type=type)
+
 
 operators = {
     "X": pauli_X,
@@ -382,6 +398,10 @@ operators = {
     "I": np.eye(2),
     "Cnot": cNOT
 }
+
+def evalWaveFunction(psi: str) -> QuantumElement:
+    tokens = tokenizeWaveFunctionString(psi)
+    return buildWaveFunction(tokens)
 
 def buildWaveFunction(tokens):
     operatorsPattern = r"^[A-Z][a-z]*"
