@@ -4,7 +4,7 @@ import numbers
 import unittest
 from enum import Enum
 
-DEBUG = False
+DEBUG = True
 
 hadamard = np.array([[1,1],[1,-1]])
 
@@ -31,7 +31,12 @@ operators = {
     "Cnot": cNOT
 }
 
-singleNumArithmetic = ["√","Sr","Exp", "Prob"]
+knownScalars = {
+    "Pi": np.pi,
+    "π": np.pi
+}
+
+singleNumArithmetic = ["√","Sr","Exp", "Prob", "Rx", "Ry", "Rz"]
 
 class WaveFunctionTokens(Enum):
     BRA = 1
@@ -436,9 +441,10 @@ def buildWaveFunction(tokens):
     braPattern = r"^\<[0,1]+\|"
     ketPattern = r"^\|[0,1]+\>$"
     scalarPattern = r"^[0-9,.,j]+$"
+    negScalarPattern = r"^-[0-9,.,j]+$"
     parenPattern = r"^[(,)]$"
     endTermPattern = r"^[+,-]$"
-    arithmaticPattern = r"^[*,/,√]$|^Sr$|^Exp$|^Prob$"
+    arithmaticPattern = r"^[*,/,√]$"
 
     openParenStack = []
     overallStack = []
@@ -446,9 +452,10 @@ def buildWaveFunction(tokens):
 
     if DEBUG: print("building " + str(tokens))
 
-    # Figure out what type each token in and add it into the current term stack in a tuple
-    # as (token, type) where the type is a WaveFunctionTokens type and the token is
-    # evaluated in into its numeric form.
+    special = 0
+
+    # Figure out what type each token in and add it into the current term stack as a 
+    # as a QuantumElement 
     # The order of these pattern matche matter because there are specific patterns
     # farther up that will also match more general patterns below.
     for i, token in enumerate(tokens):
@@ -468,6 +475,12 @@ def buildWaveFunction(tokens):
                     currentTermStack.append(element)
         elif len(openParenStack) > 0:
             continue
+        elif token in singleNumArithmetic:
+            if DEBUG: print("arithmatic")
+            currentTermStack.append(QuantumElement(token, WaveFunctionTokens.ARITHMETIC))
+        elif token in knownScalars.keys():
+            if DEBUG: print("scalar")
+            currentTermStack.append(QuantumElement(knownScalars[token], WaveFunctionTokens.SCALAR))
         elif re.search(arithmaticPattern, token):
             if DEBUG: print("arithmatic")
             currentTermStack.append(QuantumElement(token, WaveFunctionTokens.ARITHMETIC))
@@ -487,6 +500,9 @@ def buildWaveFunction(tokens):
             currentTermStack.append(buildBra(token))
         elif re.search(scalarPattern, token):
             if DEBUG: print("scalar")
+            currentTermStack.append(QuantumElement(complex(token), WaveFunctionTokens.SCALAR))
+        elif re.search(negScalarPattern,token):
+            if DEBUG: print("neg scalar")
             currentTermStack.append(QuantumElement(complex(token), WaveFunctionTokens.SCALAR))
         elif re.search(endTermPattern, token):
             if DEBUG: print("end of term")
@@ -550,6 +566,15 @@ def evaluateImplicit(left, right):
         if left.data == "Prob":
             if right.type == WaveFunctionTokens.SCALAR:
                 return QuantumElement(right.data * np.conj(right.data), WaveFunctionTokens.SCALAR)
+        if left.data == "Rx":
+            if right.type == WaveFunctionTokens.SCALAR:
+                return QuantumElement(exponentiateMatrix(1j*right.data/2 * pauli_X), WaveFunctionTokens.OPERATOR)
+        if left.data == "Ry":
+            if right.type == WaveFunctionTokens.SCALAR:
+                return QuantumElement(exponentiateMatrix(1j*right.data/2 * pauli_Y), WaveFunctionTokens.OPERATOR)
+        if left.data == "Rz":
+            if right.type == WaveFunctionTokens.SCALAR:
+                return QuantumElement(exponentiateMatrix(1j*right.data/2 * pauli_Z), WaveFunctionTokens.OPERATOR)
 
     # For two operators together, use a kron product
     if left.type == WaveFunctionTokens.OPERATOR and right.type == WaveFunctionTokens.OPERATOR:
@@ -561,6 +586,11 @@ def readInWaveFunction(psi):
     tokens = tokenizeWaveFunctionString(psi)
     evaluatedPsi = buildWaveFunction(tokens)
     return toString(evaluatedPsi.data)
+
+def exponentiateMatrix(A):
+    eigenvalues, eigenvectors = np.linalg.eig(A)
+    tmp = np.diag(np.exp(eigenvalues))
+    return eigenvectors @ tmp @ np.linalg.inv(eigenvectors)
 
 
 
@@ -642,18 +672,24 @@ class TestQuantumHelpers(unittest.TestCase):
     def test_makeControlGate(self):
         self.compareMatricies(cNOT, makeControlGate(pauli_X, 0))
 
-    def compareMatricies(self, a, b):
-        if(a.shape != b.shape):
-            self.fail("Shapes do not match. " + str(a.shape) + " != " + str(b.shape))
-        for row in range(a.shape[0]):
-            for col in range(a.shape[1]):
-                self.assertEqual(a[row][col], b[row][col])
+    def test_exponentiateMatrix(self):
+        A = np.array([[1, -1],[2,4]])
+        result = exponentiateMatrix(A)
+        expectedResult = np.array([[2*np.e**2 - np.e**3, np.e**2 - np.e**3],[-2*np.e**2 + 2*np.e**3, -1*np.e**2 + 2*np.e**3]])
+        self.compareMatricies(expectedResult, result, places=7)
 
-    def compareVectors(self, a, b):
-        if(a.shape != b.shape):
+    def compareMatricies(self, a, b, places=0):
+        if DEBUG: print("Comparing {a} and {b}".format(a=a,b=b))
+        if not (isinstance(a, np.ndarray) or isinstance(b, np.ndarray)):
+            if places == 0:
+                self.assertEqual(a,b)
+            else:
+                self.assertAlmostEqual(a,b,places=places)
+        elif(a.shape != b.shape):
             self.fail("Shapes do not match. " + str(a.shape) + " != " + str(b.shape))
-        for i in range(a.shape[0]):
-            self.assertEqual(a[i], b[i], "{a} does not match {b}".format(a=a,b=b))
+        else:
+            for row in range(a.shape[0]):
+                self.compareMatricies(a[row],b[row], places=places)
     
     def test_toString(self):
         self.assertEqual("1/{s}2 |00> + 1/{s}2 |11>".format(s=self.sqrtSymbol), toString(np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)])))
@@ -706,45 +742,45 @@ class TestQuantumHelpers(unittest.TestCase):
         testPsi = "{c}(|0> + |1>)".format(c=1/np.sqrt(2))
         tokens = tokenizeWaveFunctionString(testPsi)
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([1/np.sqrt(2), 1/np.sqrt(2)]))
+        self.compareMatricies(rtnPsi.data, np.array([1/np.sqrt(2), 1/np.sqrt(2)]))
 
     def test_BuildWaveFunctionXGate(self):
         tokens = ['X', "|0>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([0,1]))
+        self.compareMatricies(rtnPsi.data, np.array([0,1]))
     
     def test_BuildWaveFunctionCnotGate(self):
         tokens = ['Cnot', "|00>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([1,0,0,0]))
+        self.compareMatricies(rtnPsi.data, np.array([1,0,0,0]))
         tokens = ['Cnot', "|10>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([0,0,0,1]))
+        self.compareMatricies(rtnPsi.data, np.array([0,0,0,1]))
 
     def test_BuildWaveFunctionFlipFirst(self):
         tokens = ["(", "X", "I", ")", "|00>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([0,0,1,0]))
+        self.compareMatricies(rtnPsi.data, np.array([0,0,1,0]))
 
     def test_BuildWaveFunctionFlipSecond(self):
         tokens = ["(", "I", "X", ")", "|00>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([0,1,0,0]))
+        self.compareMatricies(rtnPsi.data, np.array([0,1,0,0]))
 
     def test_BuildWaveFunctionBellState(self):
         tokens = ["Cnot", "(", "H", "I", ")", "|00>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([1/np.sqrt(2),0,0,1/np.sqrt(2)]))
+        self.compareMatricies(rtnPsi.data, np.array([1/np.sqrt(2),0,0,1/np.sqrt(2)]))
 
     def test_BuildWaveFunctionSqrtSymbol(self):
         tokens = ["(", "1", "/", "√", "2", ")", "(", "|0>", "+", "|1>", ")"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([1/np.sqrt(2),1/np.sqrt(2)]))
+        self.compareMatricies(rtnPsi.data, np.array([1/np.sqrt(2),1/np.sqrt(2)]))
 
     def test_BuildWaveFunctionSqrtWord(self):
         tokens = ["(", "1", "/", "Sr", "2", ")", "(", "|0>", "+", "|1>", ")"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([1/np.sqrt(2),1/np.sqrt(2)]))
+        self.compareMatricies(rtnPsi.data, np.array([1/np.sqrt(2),1/np.sqrt(2)]))
     
     def test_evalKetBra(self):
         tokens = ["|0>", "<0|"]
@@ -765,17 +801,17 @@ class TestQuantumHelpers(unittest.TestCase):
         testPsiString = "((IX)|10>)|0>"
         tokens = tokenizeWaveFunctionString(testPsiString)
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, buildKet("|110>").data)
+        self.compareMatricies(rtnPsi.data, buildKet("|110>").data)
 
     def test_buildWaveFunctionExponential(self):
         tokens = ["(", "Exp", "2", ")", "|0>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.e**2 * buildKet("|0>").data)
+        self.compareMatricies(rtnPsi.data, np.e**2 * buildKet("|0>").data)
 
     def test_buildWaveFunctionComplexScalar(self):
         tokens = [str(np.pi * 1j), "|0>"]
         rtnPsi = buildWaveFunction(tokens)
-        self.compareVectors(rtnPsi.data, np.array([np.pi * 1j, 0]))
+        self.compareMatricies(rtnPsi.data, np.array([np.pi * 1j, 0]))
 
     def test_buildWaveFunctionProb(self):
         testPsiString = "Prob(<0|((1/Sr(2))(|0> + |1>)))"
@@ -788,14 +824,14 @@ class TestQuantumHelpers(unittest.TestCase):
         x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
         y = QuantumElement(np.array([0,1]), WaveFunctionTokens.BRA)
         z = x + y
-        self.compareVectors(z.data, np.array([1,1]))
+        self.compareMatricies(z.data, np.array([1,1]))
         self.assertEqual(z.type, WaveFunctionTokens.BRA)
     
     def test_QEAddKetKet(self):
         x = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
         y = QuantumElement(np.array([0,1]), WaveFunctionTokens.KET)
         z = x + y
-        self.compareVectors(z.data, np.array([1,1]))
+        self.compareMatricies(z.data, np.array([1,1]))
         self.assertEqual(z.type, WaveFunctionTokens.KET)
     
     def test_QEAddOpOp(self):
@@ -815,14 +851,14 @@ class TestQuantumHelpers(unittest.TestCase):
         x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
         y = QuantumElement(np.array([0,1]), WaveFunctionTokens.BRA)
         z = x - y
-        self.compareVectors(z.data, np.array([1,-1]))
+        self.compareMatricies(z.data, np.array([1,-1]))
         self.assertEqual(z.type, WaveFunctionTokens.BRA)
     
     def test_QESubKetKet(self):
         x = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
         y = QuantumElement(np.array([0,1]), WaveFunctionTokens.KET)
         z = x - y
-        self.compareVectors(z.data, np.array([1,-1]))
+        self.compareMatricies(z.data, np.array([1,-1]))
         self.assertEqual(z.type, WaveFunctionTokens.KET)
     
     def test_QESubOpOp(self):
@@ -848,7 +884,7 @@ class TestQuantumHelpers(unittest.TestCase):
         x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
         y = QuantumElement(np.array([0,1]), WaveFunctionTokens.BRA)
         z = x * y
-        self.compareVectors(z.data, np.array([0,1,0,0]))
+        self.compareMatricies(z.data, np.array([0,1,0,0]))
         self.assertEqual(z.type, WaveFunctionTokens.BRA)
 
     def test_QEMulBraKet(self):
@@ -862,7 +898,7 @@ class TestQuantumHelpers(unittest.TestCase):
         x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
         y = QuantumElement(np.array([[1,3],[2,1]]), WaveFunctionTokens.OPERATOR)
         z = x * y
-        self.compareVectors(z.data, np.array([1,3]))
+        self.compareMatricies(z.data, np.array([1,3]))
         self.assertEqual(z.type, WaveFunctionTokens.BRA)
 
     def test_QEMulKetBra(self):
@@ -876,14 +912,14 @@ class TestQuantumHelpers(unittest.TestCase):
         x = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
         y = QuantumElement(np.array([0,1]), WaveFunctionTokens.KET)
         z = x * y
-        self.compareVectors(z.data, np.array([0,1,0,0]))
+        self.compareMatricies(z.data, np.array([0,1,0,0]))
         self.assertEqual(z.type, WaveFunctionTokens.KET)
     
     def test_QEOpKet(self):
         x = QuantumElement(np.array([[0,1],[1,0]]), WaveFunctionTokens.OPERATOR)
         y = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
         z = x * y
-        self.compareVectors(z.data, np.array([0,1]))
+        self.compareMatricies(z.data, np.array([0,1]))
         self.assertEqual(z.type, WaveFunctionTokens.KET)
 
     def test_QEMulOpOp(self):
@@ -917,6 +953,12 @@ class TestQuantumHelpers(unittest.TestCase):
         self.assertEqual(str(y), "1/2")
         self.assertEqual(str(z), "[[1/{s}2]\n [1/{s}2]]".format(s=self.sqrtSymbol))
         self.assertEqual(str(w), "[1 0]")
+
+    def test_HadamardInRotation(self):
+        x = evalWaveFunction("H|0>")
+        y = evalWaveFunction("-1j(Rz(π))(Ry(π/2))|0>")
+
+        self.compareMatricies(x.data, y.data, places=7)
 
     
 
