@@ -4,7 +4,7 @@ import numbers
 import unittest
 from enum import Enum
 
-DEBUG = True
+DEBUG = False
 
 hadamard = np.array([[1,1],[1,-1]])
 
@@ -432,7 +432,7 @@ def tokenizeWaveFunctionString(stringstrong):
         tokens.append(currentToken)
     return tokens
 
-def evalWaveFunction(psi: str) -> QuantumElement:
+def eval(psi: str) -> QuantumElement:
     tokens = tokenizeWaveFunctionString(psi)
     return buildWaveFunction(tokens)
 
@@ -944,10 +944,10 @@ class TestQuantumHelpers(unittest.TestCase):
         self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
 
     def test_QEToString(self):
-        x = evalWaveFunction("<0|((1/Sr(2))(|0> + |1>))")
-        y = evalWaveFunction("Prob(<0|((1/Sr(2))(|0> + |1>)))")
-        z = evalWaveFunction("H|0>")
-        w = evalWaveFunction("<0|")
+        x = eval("<0|((1/Sr(2))(|0> + |1>))")
+        y = eval("Prob(<0|((1/Sr(2))(|0> + |1>)))")
+        z = eval("H|0>")
+        w = eval("<0|")
 
         self.assertEqual(str(x), "1/{s}2".format(s=self.sqrtSymbol))
         self.assertEqual(str(y), "1/2")
@@ -955,8 +955,8 @@ class TestQuantumHelpers(unittest.TestCase):
         self.assertEqual(str(w), "[1 0]")
 
     def test_HadamardInRotation(self):
-        x = evalWaveFunction("H|0>")
-        y = evalWaveFunction("-1j(Rz(π))(Ry(π/2))|0>")
+        x = eval("H|0>")
+        y = eval("-1j(Rz(π))(Ry(π/2))|0>")
 
         self.compareMatricies(x.data, y.data, places=7)
 
