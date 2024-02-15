@@ -159,6 +159,13 @@ class QuantumElement():
                 return self.data
             case _:
                 return "Type: {type} to string not implemented".format(type=type)
+    
+    def dagger(self):
+        self.data = np.conj(np.transpose(self.data))
+        if self.type == WaveFunctionTokens.BRA:
+            self.type = WaveFunctionTokens.KET
+        elif self.type == WaveFunctionTokens.KET:
+            self.type = WaveFunctionTokens.BRA
 
 
 def buildKet(aKet):
@@ -959,6 +966,37 @@ class TestQuantumHelpers(unittest.TestCase):
         y = eval("-1j(Rz(π))(Ry(π/2))|0>")
 
         self.compareMatricies(x.data, y.data, places=7)
+
+    def test_QEDaggerKet(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.KET)
+        x.dagger()
+        self.compareMatricies(x.data, np.array([1,0]))
+        self.assertEqual(x.type, WaveFunctionTokens.BRA)
+
+    def test_QEDaggerKetImag(self):
+        x = QuantumElement(np.array([1j,0]), WaveFunctionTokens.KET)
+        x.dagger()
+        self.compareMatricies(x.data, np.array([-1j,0]))
+        self.assertEqual(x.type, WaveFunctionTokens.BRA)
+
+    def test_QEDaggerBra(self):
+        x = QuantumElement(np.array([1,0]), WaveFunctionTokens.BRA)
+        x.dagger()
+        self.compareMatricies(x.data, np.array([1,0]))
+        self.assertEqual(x.type, WaveFunctionTokens.KET)
+
+    def test_QEDaggerOp(self):
+        x = QuantumElement(np.array([[1,1],[0,1]]), WaveFunctionTokens.OPERATOR)
+        x.dagger()
+        self.compareMatricies(x.data, np.array([[1,0],[1,1]]))
+        self.assertEqual(x.type, WaveFunctionTokens.OPERATOR)
+
+    def test_QEDaggerOpImag(self):
+        x = QuantumElement(np.array([[1,1j],[0,1]]), WaveFunctionTokens.OPERATOR)
+        x.dagger()
+        self.compareMatricies(x.data, np.array([[1,0],[-1j,1]]))
+        self.assertEqual(x.type, WaveFunctionTokens.OPERATOR)
+
 
     
 
