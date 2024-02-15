@@ -149,21 +149,35 @@ def findFraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, i
         return numerator, denominator
 
 def prettyWaveFunctionAmplitude(n) -> str:
-    # n can be float or complex float
     tolerance = 1e-8
     sqrtSymbol = "\u221A"
 
-    numerator, denominator = findFraction((n * np.conj(n)).real)
+    complexString = ""
+    if np.abs(n.imag) > tolerance:
+        complexString = prettyWaveFunctionAmplitude(n.imag)
+        if n.imag < 0:
+            complexString = "-" + complexString
+        else:
+            complexString = "+" + complexString
+        complexString = complexString + "j"
+
+    if n.real == 0:
+        return "0{c}".format( c=complexString)
     
+    numerator, denominator = findFraction(n.real**2)
+
     # If a fraction for the number cannot be found
     if denominator == 0:
-        return str(n)
+        return "{r}{c}".format(r=str(n.real), c=complexString)
+
+    # If fraction is nearly zero
     if numerator / denominator < tolerance:
-        return "0"
+        return "0{c}".format(c=complexString)
+    # If fraction is nearly 1
     if numerator / denominator > (1 - tolerance) and numerator / denominator < (1 + tolerance):
-        if numerator < 0:
-            return "-1"
-        return "1"
+        if n.real < 0:
+             return "-1{c}".format(c=complexString)
+        return "1{c}".format(c=complexString)
     
     numeratorIsRootable = False
     denominatorIsRootable = False
@@ -178,31 +192,45 @@ def prettyWaveFunctionAmplitude(n) -> str:
     if n.real < 0:
         numeratorString = "-" + numeratorString
 
-    return "{n}/{d}".format(n=numeratorString, d=denominatorString)
+    return "{n}/{d}{c}".format(n=numeratorString, d=denominatorString, c=complexString)
 
 vPrettyWaveFunctionAmplitude = np.vectorize(prettyWaveFunctionAmplitude)
 
 def prettyFraction(n) -> str:
     tolerance = 1e-8
-    numerator, denominator = findFraction(n)
+
+    complexString = ""
+    if n.imag > tolerance:
+        complexString = prettyFraction(n.imag)
+        if "-" not in complexString:
+            complexString = "+" + complexString
+        complexString = complexString + "j"
+
+    if n.real == 0:
+        return "0{c}".format( c=complexString)
+    
+    numerator, denominator = findFraction(n.real)
 
     # If a fraction for the number cannot be found
-    if numerator == 0:
-        return str(n)
+    if denominator == 0:
+        return "{r}{c}".format(r=str(n.real), c=complexString)
+
+    # If fraction is nearly zero
     if numerator / denominator < tolerance:
-        return "0"
+        return "0{c}".format(c=complexString)
+    # If fraction is nearly 1
     if numerator / denominator > (1 - tolerance) and numerator / denominator < (1 + tolerance):
         if n < 0:
-            return "-1"
-        return "1"
+             return "-1{c}".format(c=complexString)
+        return "1{c}".format(c=complexString)
     
     numeratorString = str(numerator)
     denominatorString = str(denominator)
 
     if n < 0:
         numeratorString = "-" + numeratorString
-    
-    return "{n}/{d}".format(n=numeratorString, d=denominatorString)
+
+    return "{n}/{d}{c}".format(n=numeratorString, d=denominatorString, c=complexString)
 
 vPrettyFraction = np.vectorize(prettyFraction)
 
@@ -377,13 +405,13 @@ class QuantumElement():
     def __str__(self):
         match self.type:
             case WaveFunctionTokens.BRA:
-                return str(vPrettyWaveFunctionAmplitude(np.reshape(self.data, (len(self.data),1))))
+                return str(vPrettyWaveFunctionAmplitude(self.data)).replace("'","")
             case WaveFunctionTokens.KET:
-                return str(vPrettyWaveFunctionAmplitude(self.data))
+                return str(vPrettyWaveFunctionAmplitude(np.reshape(self.data, (len(self.data),1)))).replace("'","")
             case WaveFunctionTokens.OPERATOR:
-                return str(vPrettyWaveFunctionAmplitude(self.data))
+                return str(vPrettyWaveFunctionAmplitude(self.data)).replace("'","")
             case WaveFunctionTokens.SCALAR:
-                return str(prettyWaveFunctionAmplitude(self.data))
+                return str(prettyWaveFunctionAmplitude(self.data)).replace("'","")
             case WaveFunctionTokens.ARITHMETIC:
                 return self.data
             case _:
@@ -593,6 +621,7 @@ class TestQuantumHelpers(unittest.TestCase):
         self.assertEqual("1", prettyFraction(1))
         self.assertEqual("1/2", prettyFraction(1/2))
         self.assertEqual("0", prettyFraction(0))
+        self.assertEqual("0", prettyFraction(0 + 0j))
         self.assertEqual("1/3", prettyFraction(1/3))
         self.assertEqual("1/10", prettyFraction(1/10))
 
@@ -603,6 +632,7 @@ class TestQuantumHelpers(unittest.TestCase):
         self.assertEqual("1/2", prettyWaveFunctionAmplitude(1/2))
         self.assertEqual("{s}3/2".format(s=self.sqrtSymbol), prettyWaveFunctionAmplitude(np.sqrt(3)/2))
         self.assertEqual("{s}7/{s}8".format(s=self.sqrtSymbol), prettyWaveFunctionAmplitude(np.sqrt(7)/np.sqrt(8)))
+        self.assertEqual("1/{s}2+1/{s}2j".format(s=self.sqrtSymbol), prettyWaveFunctionAmplitude(1/np.sqrt(2) + 1j/np.sqrt(2)))
 
         #Make sure negatives are supported
         self.assertEqual("-1/{s}2".format(s=self.sqrtSymbol), prettyWaveFunctionAmplitude(-1/np.sqrt(2)))
@@ -874,6 +904,17 @@ class TestQuantumHelpers(unittest.TestCase):
         z = x & y
         self.compareMatricies(z.data, np.array([[0,1,0,0],[1,0,0,0],[0,0,0,1],[0,0,1,0]]))
         self.assertEqual(z.type, WaveFunctionTokens.OPERATOR)
+
+    def test_QEToString(self):
+        x = evalWaveFunction("<0|((1/Sr(2))(|0> + |1>))")
+        y = evalWaveFunction("Prob(<0|((1/Sr(2))(|0> + |1>)))")
+        z = evalWaveFunction("H|0>")
+        w = evalWaveFunction("<0|")
+
+        self.assertEqual(str(x), "1/{s}2".format(s=self.sqrtSymbol))
+        self.assertEqual(str(y), "1/2")
+        self.assertEqual(str(z), "[[1/{s}2]\n [1/{s}2]]".format(s=self.sqrtSymbol))
+        self.assertEqual(str(w), "[1 0]")
 
     
 
