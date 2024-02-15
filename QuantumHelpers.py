@@ -161,11 +161,13 @@ class QuantumElement():
                 return "Type: {type} to string not implemented".format(type=type)
     
     def dagger(self):
-        self.data = np.conj(np.transpose(self.data))
+        newType = self.type
         if self.type == WaveFunctionTokens.BRA:
-            self.type = WaveFunctionTokens.KET
+            newType = WaveFunctionTokens.KET
         elif self.type == WaveFunctionTokens.KET:
-            self.type = WaveFunctionTokens.BRA
+            newType = WaveFunctionTokens.BRA
+
+        return QuantumElement(np.conj(np.transpose(self.data)), newType)
 
 
 def buildKet(aKet):
