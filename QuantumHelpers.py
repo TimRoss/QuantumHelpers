@@ -4,6 +4,15 @@ import numbers
 import unittest
 from enum import Enum
 
+plottingAvailable = False
+
+try:
+    from matplotlib import pyplot as plt
+    from matplotlib.patches import Circle
+    plottingAvailable = True
+except:
+    plottingAvailable=False
+
 DEBUG = False
 
 hadamard = np.array([[1,1],[1,-1]])
@@ -168,6 +177,62 @@ class QuantumElement():
             newType = WaveFunctionTokens.BRA
 
         return QuantumElement(np.conj(np.transpose(self.data)), newType)
+    
+    def draw(self):
+        if not plottingAvailable:
+            print("Plotting not available. Make sure matplotlib is installed.")
+            return
+        plt.style.use('Solarize_Light2')
+
+        axs = plt.subplots(1,2, layout="constrained", figsize=(10,5))
+
+        self._addStatePlot(axs[1][0], False)
+        self._addStatePlot(axs[1][1], True)
+
+    
+    def _addStatePlot(self, ax, imag: bool):
+        if imag:
+            x = self.data.imag
+            title="Imaginary"
+        else:
+            x = self.data.real
+            title="Real"
+
+        # Center window around origin
+        xlim = [-1.2,1.2]
+        ylim = [-1.2,1.2]
+
+        # Set tick marks to quadrants and add labels
+        # Not sure if there is a way to do it without doing it 3 times
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_xticks([0], labels="")
+        ax.set_yticks([0], labels="")
+        ax.set_xlabel("-|0>")
+        ax.set_ylabel("-|1>")
+        ax2 = ax.twinx()
+        ax2.set_xlim(xlim)
+        ax2.set_ylim(ylim)
+        ax2.set_xticks([0], labels="")
+        ax2.set_yticks([0], labels="")
+        ax2.set_ylabel("|1>")
+        ax3 = ax.twiny()
+        ax3.set_xlabel("|0>")
+        ax3.set_xlim(xlim)
+        ax3.set_ylim(ylim)
+        ax3.set_xticks([0], labels="")
+        ax3.set_yticks([0], labels="")
+
+        # Draw circle at len=1 
+        normCircle = Circle((0,0), 1, linestyle="--", fill=False, color="black")
+        ax.add_patch(normCircle)
+
+        # Draw x-axis 
+        plt.plot([-2,2],[-2,2], "--", color="green")
+
+        # Draw the actual state
+        arrow_head_length = np.sqrt(x[1]**2 + x[0]**2) * 0.1
+        plt.arrow(0,0,x[1],x[0], color="blue", width=0.02, head_width=arrow_head_length, head_length=arrow_head_length, length_includes_head=True)
 
 
 def buildKet(aKet):
