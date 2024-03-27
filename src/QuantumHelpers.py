@@ -321,6 +321,11 @@ class QuantumElement:
             length_includes_head=True,
         )
 
+    def print(self):
+        if self.type == WaveFunctionTokens.KET:
+            printStates(self.data)
+        
+
 
 def buildKet(aKet):
     """
@@ -587,6 +592,35 @@ def makeControlGate(gate, controlPosition):
         return np.kron(zeroState, np.eye(2)) + np.kron(oneState, gate)
     elif controlPosition == 1:
         return np.kron(np.kron(oneState, np.eye(2)) + np.kron(zeroState, gate))
+    
+
+def makeControlGate(control, target, gate, totalQubits):
+    '''
+    Make a control gate with the specified arguments.
+
+    Args:
+        control (int): position of control qubit (1-indexed)
+        target (int): position of target qubit (1-indexed)
+        gate (string): gate to enact on target qubit
+        totalQubits (int): total number of qubits in circuit
+
+    Return:
+        QuantumElement: Operator for the control gate
+    '''
+    n = np.repeat('I', totalQubits)
+    controlString = ""
+    targetString = ""
+    for i, qubit in enumerate(n):
+        if i + 1 == control:
+            controlString = controlString + "(|0><0|)"
+            targetString = targetString + "(|1><1|)"
+        elif i + 1 == target:
+            controlString = controlString + qubit
+            targetString = targetString + gate
+        else:
+            controlString = controlString + qubit
+            targetString = targetString + qubit
+    return eval(controlString + " + " + targetString)
 
 
 def tokenizeWaveFunctionString(stringstrong):

@@ -83,9 +83,6 @@ class TestQuantumHelpers(unittest.TestCase):
         #Make sure negatives are supported
         self.assertEqual("-1/{s}2".format(s=self.sqrtSymbol),qh. prettyWaveFunctionAmplitude(-1/np.sqrt(2)))
 
-    def test_makeControlGate(self):
-        self.compareMatricies(qh.cNOT, qh.makeControlGate(qh.pauli_X, 0))
-
     def test_exponentiateMatrix(self):
         A = np.array([[1, -1],[2,4]])
         result = qh.exponentiateMatrix(A)
@@ -403,6 +400,45 @@ class TestQuantumHelpers(unittest.TestCase):
         self.compareMatricies(x.data, np.array([[1,0],[-1j,1]]))
         self.assertEqual(x.type, qh.WaveFunctionTokens.OPERATOR)
 
+    def test_MakeControlGateCX122(self):
+        cx = qh.makeControlGate(1, 2, "X", 2)
+        inputs = ['|00>', '|01>', '|10>', '|11>']
+        expected = ['|00>', '|01>', '|11>', '|10>']
+        for i, input in enumerate(inputs):
+            x = qh.eval(input)
+            y = qh.eval(expected[i])
+            result = cx * x
+            self.compareMatricies(result.data, y.data)
+
+    def test_MakeControlGateCX123(self):
+        cx = qh.makeControlGate(1, 2, "X", 3)
+        inputs = ['|000>', '|001>', '|010>', '|011>', '|100>', '|101>', '|110>', '|111>']
+        expected = ['|000>', '|001>', '|010>', '|011>', '|110>', '|111>', '|100>', '|101>']
+        for i, input in enumerate(inputs):
+            x = qh.eval(input)
+            y = qh.eval(expected[i])
+            result = cx * x
+            self.compareMatricies(result.data, y.data)
+
+    def test_MakeControlGateCX133(self):
+        cx = qh.makeControlGate(1, 3, "X", 3)
+        inputs = ['|000>', '|001>', '|010>', '|011>', '|100>', '|101>', '|110>', '|111>']
+        expected = ['|000>', '|001>', '|010>', '|011>', '|101>', '|100>', '|111>', '|110>']
+        for i, input in enumerate(inputs):
+            x = qh.eval(input)
+            y = qh.eval(expected[i])
+            result = cx * x
+            self.compareMatricies(result.data, y.data)
+
+    def test_MakeControlGateCX213(self):
+        cx = qh.makeControlGate(2, 1, "X", 3)
+        inputs = ['|000>', '|001>', '|010>', '|011>', '|100>', '|101>', '|110>', '|111>']
+        expected = ['|000>', '|001>', '|110>', '|111>', '|100>', '|101>', '|010>', '|011>']
+        for i, input in enumerate(inputs):
+            x = qh.eval(input)
+            y = qh.eval(expected[i])
+            result = cx * x
+            self.compareMatricies(result.data, y.data)
 
 # Run unit tests if run as a script
 if __name__ == '__main__':
