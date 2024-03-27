@@ -440,6 +440,18 @@ class TestQuantumHelpers(unittest.TestCase):
             result = cx * x
             self.compareMatricies(result.data, y.data)
 
+    def test_MakeControlGateCX214(self):
+        cx = qh.makeControlGate(3, 2, "X", 4)
+        inputs = ['|0000>', '|0001>', '|0010>', '|0011>', '|0100>', '|0101>', '|0110>', '|0111>',
+        '|1000>', '|1001>', '|1010>', '|1011>', '|1100>', '|1101>', '|1110>', '|1111>']
+        expected = ['|0000>', '|0001>', '|0110>', '|0111>', '|0100>', '|0101>', '|0010>', '|0011>',
+        '|1000>', '|1001>', '|1110>', '|1111>', '|1100>', '|1101>', '|1010>', '|1011>']
+        for i, input in enumerate(inputs):
+            x = qh.eval(input)
+            y = qh.eval(expected[i])
+            result = cx * x
+            self.compareMatricies(result.data, y.data)
+
 # Run unit tests if run as a script
 if __name__ == '__main__':
     unittest.main(verbosity=2, exit=False)

@@ -582,16 +582,6 @@ def prettyFraction(n) -> str:
 
 
 vPrettyFraction = np.vectorize(prettyFraction)
-
-
-def makeControlGate(gate, controlPosition):
-    zeroState = np.outer(buildKet("|0>").data, buildBra("<0|").data)
-    oneState = np.outer(buildKet("|1>").data, buildBra("<1|").data)
-
-    if controlPosition == 0:
-        return np.kron(zeroState, np.eye(2)) + np.kron(oneState, gate)
-    elif controlPosition == 1:
-        return np.kron(np.kron(oneState, np.eye(2)) + np.kron(zeroState, gate))
     
 
 def makeControlGate(control, target, gate, totalQubits):
