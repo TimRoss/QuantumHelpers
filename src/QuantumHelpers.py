@@ -678,7 +678,7 @@ def buildWaveFunction(tokens):
     negScalarPattern = r"^-[0-9,.,j]+$"
     parenPattern = r"^[(,)]$"
     endTermPattern = r"^[+,-]$"
-    arithmaticPattern = r"^[*,/,√]$"
+    arithmeticPattern = r"^[*,/,√]$"
 
     openParenStack = []
     overallStack = []
@@ -713,7 +713,7 @@ def buildWaveFunction(tokens):
             continue
         elif token in singleNumArithmetic:
             if DEBUG:
-                print("arithmatic")
+                print("arithmetic")
             currentTermStack.append(
                 QuantumElement(token, WaveFunctionTokens.ARITHMETIC)
             )
@@ -723,9 +723,9 @@ def buildWaveFunction(tokens):
             currentTermStack.append(
                 QuantumElement(knownScalars[token], WaveFunctionTokens.SCALAR)
             )
-        elif re.search(arithmaticPattern, token):
+        elif re.search(arithmeticPattern, token):
             if DEBUG:
-                print("arithmatic")
+                print("arithmetic")
             currentTermStack.append(
                 QuantumElement(token, WaveFunctionTokens.ARITHMETIC)
             )
