@@ -324,7 +324,6 @@ class QuantumElement:
     def print(self):
         if self.type == WaveFunctionTokens.KET:
             printStates(self.data)
-        
 
 
 def buildKet(aKet):
@@ -582,10 +581,10 @@ def prettyFraction(n) -> str:
 
 
 vPrettyFraction = np.vectorize(prettyFraction)
-    
+
 
 def makeControlGate(control, target, gate, totalQubits):
-    '''
+    """
     Make a control gate with the specified arguments.
 
     Args:
@@ -596,8 +595,8 @@ def makeControlGate(control, target, gate, totalQubits):
 
     Return:
         QuantumElement: Operator for the control gate
-    '''
-    n = np.repeat('I', totalQubits)
+    """
+    n = np.repeat("I", totalQubits)
     controlString = ""
     targetString = ""
     for i, qubit in enumerate(n):
@@ -686,8 +685,6 @@ def buildWaveFunction(tokens):
 
     if DEBUG:
         print("building " + str(tokens))
-
-    special = 0
 
     # Figure out what type each token in and add it into the current term stack as a
     # as a QuantumElement

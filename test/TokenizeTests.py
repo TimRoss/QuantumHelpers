@@ -6,6 +6,7 @@ TestHelpers.addSourceDirectoryToPath()
 
 import QuantumHelpers as qh
 
+
 class TokenizeTests(unittest.TestCase):
     def test_tokenizeSingle(self):
         testPsi = "|01>"
@@ -14,7 +15,7 @@ class TokenizeTests(unittest.TestCase):
 
     def test_tokenizeGates(self):
         testPsi = "HX|0>"
-        expectedTokens = ["H","X", "|0>"]
+        expectedTokens = ["H", "X", "|0>"]
         self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
 
     def test_tokenizeAddition(self):
@@ -44,9 +45,15 @@ class TokenizeTests(unittest.TestCase):
         testPsi = "2Exp(2\u03c0)|0>"
         expectedTokens = ["2", "Exp", "(", "2", "\u03c0", ")", "|0>"]
         self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
-    
+
     def tokenizeCompare(self, testPsi, expectedTokens):
         rtnArray = qh.tokenizeWaveFunctionString(testPsi)
-        self.assertEqual(len(rtnArray), len(expectedTokens), "Sizes not equal. Got: {t} Expected: {e}".format(t=rtnArray, e=expectedTokens))
+        self.assertEqual(
+            len(rtnArray),
+            len(expectedTokens),
+            "Sizes not equal. Got: {t} Expected: {e}".format(
+                t=rtnArray, e=expectedTokens
+            ),
+        )
         for i in range(len(expectedTokens)):
             self.assertEqual(rtnArray[i], expectedTokens[i])
