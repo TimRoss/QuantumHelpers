@@ -82,10 +82,11 @@ class BuildWaveFunctionTests(unittest.TestCase):
         TestHelpers.compareMatricies(self, rtnPsi.data, qh.buildKet("|110>").data)
 
     def test_buildWaveFunctionExponential(self):
-        tokens = ["(", "Exp", "2", ")", "|0>"]
+        testPsiString = "(H * (Exp(-1j * (Pi/2) * Z)) * H) |0>"
+        tokens = qh.tokenizeWaveFunctionString(testPsiString)
         rtnPsi = qh.buildWaveFunction(tokens)
         TestHelpers.compareMatricies(
-            self, rtnPsi.data, np.e**2 * qh.buildKet("|0>").data
+            self, rtnPsi.data, qh.eval("-1j * |1>").data, places=5
         )
 
     def test_buildWaveFunctionComplexScalar(self):

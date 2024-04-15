@@ -90,6 +90,10 @@ class OtherTests(unittest.TestCase):
             "1/{s}2+1/{s}2j".format(s=TestHelpers.sqrtSymbol),
             qh.prettyWaveFunctionAmplitude(1 / np.sqrt(2) + 1j / np.sqrt(2)),
         )
+        self.assertEqual(
+            "1/{s}2-1/{s}2j".format(s=TestHelpers.sqrtSymbol),
+            qh.prettyWaveFunctionAmplitude(1 / np.sqrt(2) - 1j / np.sqrt(2)),
+        )
 
         # Make sure negatives are supported
         self.assertEqual(

@@ -482,20 +482,18 @@ def prettyWaveFunctionAmplitude(n) -> str:
     complexString = ""
     if np.abs(n.imag) > tolerance:
         complexString = prettyWaveFunctionAmplitude(n.imag)
-        if n.imag < 0:
-            complexString = "-" + complexString
-        else:
+        if n.imag > 0:
             complexString = "+" + complexString
         complexString = complexString + "j"
 
-    if n.real == 0:
+    if abs(n.real) < tolerance:
         return "0{c}".format(c=complexString)
 
     numerator, denominator = findFraction(n.real**2)
 
     # If a fraction for the number cannot be found
     if denominator == 0:
-        return "{r}{c}".format(r=str(n.real), c=complexString)
+        return "{:.3f}{c}".format(n.real, c=complexString)
 
     # If fraction is nearly zero
     if numerator / denominator < tolerance:
@@ -826,8 +824,10 @@ def evaluateImplicit(left, right):
             if right.type == WaveFunctionTokens.SCALAR:
                 return QuantumElement(np.sqrt(right.data), WaveFunctionTokens.SCALAR)
         if left.data == "Exp":
-            if right.type == WaveFunctionTokens.SCALAR:
-                return QuantumElement(np.e ** (right.data), WaveFunctionTokens.SCALAR)
+            if right.type == WaveFunctionTokens.OPERATOR:
+                return QuantumElement(
+                    exponentiateMatrix(right.data), WaveFunctionTokens.OPERATOR
+                )
         if left.data == "Prob":
             if right.type == WaveFunctionTokens.SCALAR:
                 return QuantumElement(
@@ -836,19 +836,19 @@ def evaluateImplicit(left, right):
         if left.data == "Rx":
             if right.type == WaveFunctionTokens.SCALAR:
                 return QuantumElement(
-                    exponentiateMatrix(1j * right.data / 2 * pauli_X),
+                    exponentiateMatrix(-1j * right.data / 2 * pauli_X),
                     WaveFunctionTokens.OPERATOR,
                 )
         if left.data == "Ry":
             if right.type == WaveFunctionTokens.SCALAR:
                 return QuantumElement(
-                    exponentiateMatrix(1j * right.data / 2 * pauli_Y),
+                    exponentiateMatrix(-1j * right.data / 2 * pauli_Y),
                     WaveFunctionTokens.OPERATOR,
                 )
         if left.data == "Rz":
             if right.type == WaveFunctionTokens.SCALAR:
                 return QuantumElement(
-                    exponentiateMatrix(1j * right.data / 2 * pauli_Z),
+                    exponentiateMatrix(-1j * right.data / 2 * pauli_Z),
                     WaveFunctionTokens.OPERATOR,
                 )
 

@@ -181,8 +181,8 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(str(w), "[1 0]")
 
     def test_HadamardInRotation(self):
-        x = qh.eval("H|0>")
-        y = qh.eval("-1j(Rz(π))(Ry(π/2))|0>")
+        x = qh.eval("H")
+        y = qh.eval("(-1j(Rz(π))*(Ry(π/2)))")
 
         TestHelpers.compareMatricies(self, x.data, y.data, places=7)
 
