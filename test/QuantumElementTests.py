@@ -182,7 +182,7 @@ class QuantumElementTests(unittest.TestCase):
 
     def test_HadamardInRotation(self):
         x = qh.eval("H")
-        y = qh.eval("(-1j(Rz(π))*(Ry(π/2)))")
+        y = qh.eval("(-1j(Rz(π))*(Ry(3 * π/2)))")
 
         TestHelpers.compareMatricies(self, x.data, y.data, places=7)
 
