@@ -19,8 +19,6 @@ except:
 # Choose whether to print debug statements.
 DEBUG = False
 
-hadamard = np.array([[1, 1], [1, -1]])
-
 # Index unitKets with the index of the state that you want
 # unitKets(0) = |0> and unitKets(1) = |1>
 unitKets = np.array([[1, 0], [0, 1]])
@@ -35,6 +33,7 @@ pauli_minus = (1 / 2) * (pauli_X - 1j * pauli_Y)
 cNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
 cZ = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, -1]])
 hadamard = (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]])
+y_hadamard = (1 / np.sqrt(2)) * np.array([[-1, 1j], [-1j, 1]])
 
 # Map string representation of known matricies to actual matrix.
 operators = {
@@ -42,6 +41,7 @@ operators = {
     "Y": pauli_Y,
     "Z": pauli_Z,
     "H": hadamard,
+    "Hy": y_hadamard,
     "I": np.eye(2),
     "Cnot": cNOT,
 }
