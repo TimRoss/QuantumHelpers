@@ -119,7 +119,7 @@ class OtherTests(unittest.TestCase):
         )
 
     def test_MakeControlGateCX122(self):
-        cx = qh.makeControlGate(1, 2, "X", 2)
+        cx = qh.make_control_gate(1, 2, "X", 2)
         inputs = ["|00>", "|01>", "|10>", "|11>"]
         expected = ["|00>", "|01>", "|11>", "|10>"]
         for i, input in enumerate(inputs):
@@ -129,7 +129,7 @@ class OtherTests(unittest.TestCase):
             TestHelpers.compareMatricies(self, result.data, y.data)
 
     def test_MakeControlGateCX123(self):
-        cx = qh.makeControlGate(1, 2, "X", 3)
+        cx = qh.make_control_gate(1, 2, "X", 3)
         inputs = [
             "|000>",
             "|001>",
@@ -157,7 +157,7 @@ class OtherTests(unittest.TestCase):
             TestHelpers.compareMatricies(self, result.data, y.data)
 
     def test_MakeControlGateCX133(self):
-        cx = qh.makeControlGate(1, 3, "X", 3)
+        cx = qh.make_control_gate(1, 3, "X", 3)
         inputs = [
             "|000>",
             "|001>",
@@ -185,7 +185,7 @@ class OtherTests(unittest.TestCase):
             TestHelpers.compareMatricies(self, result.data, y.data)
 
     def test_MakeControlGateCX213(self):
-        cx = qh.makeControlGate(2, 1, "X", 3)
+        cx = qh.make_control_gate(2, 1, "X", 3)
         inputs = [
             "|000>",
             "|001>",
@@ -213,7 +213,7 @@ class OtherTests(unittest.TestCase):
             TestHelpers.compareMatricies(self, result.data, y.data)
 
     def test_MakeControlGateCX214(self):
-        cx = qh.makeControlGate(3, 2, "X", 4)
+        cx = qh.make_control_gate(3, 2, "X", 4)
         inputs = [
             "|0000>",
             "|0001>",
