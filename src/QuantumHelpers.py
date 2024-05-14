@@ -48,18 +48,6 @@ operators = {
 
 knownScalars = {"Pi": np.pi, "π": np.pi}
 
-# Known functions and the number of arguments they take
-wavefunction_functions = {
-    "√": 1,
-    "Sr": 1,
-    "Exp": 1,
-    "Prob": 1,
-    "Rx": 1,
-    "Ry": 1,
-    "Rz": 1,
-    "Ctrl": 4,
-}
-
 
 class WaveFunctionTokens(Enum):
     """Types of tokens for the wavefunction tokens. These will determine the interactions between different elements."""
@@ -620,36 +608,6 @@ def make_control_gate(control, target, gate, total_qubits):
     return eval(control_string + " + " + target_string)
 
 
-def make_control_gate_tokens(control: int, target: int, gate, total_qubits: int):
-    """
-    Make a control gate where the gate passed in is a matrix.
-
-    Args:
-        control (int): position of control qubit (1-indexed)
-        target (int): position of target qubit (1-indexed)
-        gate (np.ndarray): Matrix representation of 1-qubit operator to use on target bit
-        totalQubits (int): total number of qubits in circuit
-
-    Return:
-        QuantumElement: Operator for the control gate
-    """
-    control_arr = []
-    target_arr = []
-    for i in range(1, total_qubits + 1):
-        if i == control:
-            control_arr.append(eval("|0><0|").data)
-            target_arr.append(eval("|1><1|").data)
-        elif i == target:
-            control_arr.append(np.eye(2))
-            target_arr.append(gate)
-        else:
-            control_arr.append(np.eye(2))
-            target_arr.append(np.eye(2))
-    return WaveFunctionElement(
-        chainedKron(control_arr) + chainedKron(target_arr), WaveFunctionTokens.OPERATOR
-    )
-
-
 def tokenizeWaveFunctionString(stringstrong):
     # Tokenize a string
     # Characters to tokenize on: <, >, |, Capitol Letters, spaces
@@ -727,7 +685,7 @@ def buildWaveFunction(tokens, over_function: str = None):
         if over_function not in wavefunction_functions:
             print(f"ERROR: Function {over_function} is not a known function.")
             return None
-        expected_args = wavefunction_functions[over_function]
+        expected_args = wavefunction_functions[over_function][0]
         openParenStack.append(0)
 
     if DEBUG:
@@ -832,18 +790,20 @@ def buildWaveFunction(tokens, over_function: str = None):
             print("token not recognized: {token}".format(token=token))
 
     # Evaluate the full stack and what is left over in the overall stack
-    #overallStack.append(evaluateStack(currentTermStack))
+    # overallStack.append(evaluateStack(currentTermStack))
     if over_function is not None:
         if expected_args != 1:
             print(
-                f"ERROR: Incorrect number of arguments for {over_function}, expected {wavefunction_functions[over_function]}"
+                f"ERROR: Incorrect number of arguments for {over_function}, expected {wavefunction_functions[over_function][0]}"
             )
         else:
             openingParenIndex = openParenStack.pop()
             if openingParenIndex == 0:
                 openingParenIndex = -1
             overallStack.append(buildWaveFunction(tokens[openingParenIndex + 1 :]))
-            overallStack.append(WaveFunctionElement(over_function, WaveFunctionTokens.FUNCTION))
+            overallStack.append(
+                WaveFunctionElement(over_function, WaveFunctionTokens.FUNCTION)
+            )
     if len(openParenStack) > 0:
         print("ERROR: Unclosed parenthesis")
     return evaluateStack(overallStack + currentTermStack)
@@ -858,10 +818,10 @@ def evaluateStack(stack):
         right = stack.pop()
         if right.type == WaveFunctionTokens.FUNCTION:
             args = []
-            for i in range(wavefunction_functions[right.data]):
+            for i in range(wavefunction_functions[right.data][0]):
                 args.append(stack.pop())
             args.reverse()
-            stack.append(evaluate_function(right, args))
+            stack.append(wavefunction_functions[right.data][1](*args))
             continue
         left = stack.pop()
         arithmetic = None
@@ -881,66 +841,6 @@ def evaluateStack(stack):
     if DEBUG:
         print("Evaluated stack as: " + str(rtn))
     return rtn
-
-
-def evaluate_function(func, args):
-    if func.data == "√" or func.data == "Sr" or func.data == "Sqrt":
-        if args[0].type == WaveFunctionTokens.SCALAR:
-            return WaveFunctionElement(np.sqrt(args[0].data), WaveFunctionTokens.SCALAR)
-        else:
-            print("ERROR: Square root function expected a Scalar argument")
-    if func.data == "Exp":
-        if args[0].type == WaveFunctionTokens.OPERATOR:
-            return WaveFunctionElement(
-                exponentiateMatrix(args[0].data), WaveFunctionTokens.OPERATOR
-            )
-        else:
-            print("ERROR: Exp function expected a scalar arg")
-    if func.data == "Prob":
-        if args[0].type == WaveFunctionTokens.SCALAR:
-            return WaveFunctionElement(
-                args[0].data * np.conj(args[0].data), WaveFunctionTokens.SCALAR
-            )
-        else:
-            print("ERROR: Prob function expected a scalar arg")
-    if func.data == "Rx":
-        if args[0].type == WaveFunctionTokens.SCALAR:
-            return WaveFunctionElement(
-                exponentiateMatrix(-1j * args[0].data / 2 * pauli_X),
-                WaveFunctionTokens.OPERATOR,
-            )
-        else:
-            print("ERROR: Rx function expected a scalar arg")
-    if func.data == "Ry":
-        if args[0].type == WaveFunctionTokens.SCALAR:
-            return WaveFunctionElement(
-                exponentiateMatrix(-1j * args[0].data / 2 * pauli_Y),
-                WaveFunctionTokens.OPERATOR,
-            )
-        else:
-            print("ERROR: Ry function expected a scalar arg")
-    if func.data == "Rz":
-        if args[0].type == WaveFunctionTokens.SCALAR:
-            return WaveFunctionElement(
-                exponentiateMatrix(-1j * args[0].data / 2 * pauli_Z),
-                WaveFunctionTokens.OPERATOR,
-            )
-        else:
-            print("ERROR: Rz function expected a scalar arg")
-    if func.data == "Ctrl":
-        if (
-            args[0].type == WaveFunctionTokens.SCALAR
-            and args[1].type == WaveFunctionTokens.SCALAR
-            and args[2].type == WaveFunctionTokens.OPERATOR
-            and args[3].type == WaveFunctionTokens.SCALAR
-        ):
-            return make_control_gate_tokens(
-                int(args[0].data.real), int(args[1].data.real), args[2].data, int(args[3].data.real)
-            )
-        else:
-            print(
-                "ERROR: Ctrl function expects scalar, scalar, operator, scalar arguments"
-            )
 
 
 def evaluateExplicit(left, arithmetic, right):
@@ -982,3 +882,84 @@ def exponentiateMatrix(A):
     eigenvalues, eigenvectors = np.linalg.eig(A)
     tmp = np.diag(np.exp(eigenvalues))
     return eigenvectors @ tmp @ np.linalg.inv(eigenvectors)
+
+
+def make_control_gate_tokens(acontrol: int, atarget: int, agate, atotal_qubits: int):
+    """
+    Make a control gate where the gate passed in is a matrix.
+
+    Args:
+        control (int): position of control qubit (1-indexed)
+        target (int): position of target qubit (1-indexed)
+        gate (np.ndarray): Matrix representation of 1-qubit operator to use on target bit
+        totalQubits (int): total number of qubits in circuit
+
+    Return:
+        QuantumElement: Operator for the control gate
+    """
+    control = int(acontrol.data.real)
+    target = int(atarget.data.real)
+    gate = agate.data
+    total_qubits = int(atotal_qubits.data.real)
+    control_arr = []
+    target_arr = []
+    for i in range(1, total_qubits + 1):
+        if i == control:
+            control_arr.append(eval("|0><0|").data)
+            target_arr.append(eval("|1><1|").data)
+        elif i == target:
+            control_arr.append(np.eye(2))
+            target_arr.append(gate)
+        else:
+            control_arr.append(np.eye(2))
+            target_arr.append(np.eye(2))
+    return WaveFunctionElement(
+        chainedKron(control_arr) + chainedKron(target_arr), WaveFunctionTokens.OPERATOR
+    )
+
+
+def sqrt(a: WaveFunctionElement):
+    return WaveFunctionElement(np.sqrt(a.data), a.type)
+
+
+def exponentiate_matrix_wv(a: WaveFunctionElement):
+    return WaveFunctionElement(exponentiateMatrix(a.data), a.type)
+
+
+def rx(theta: WaveFunctionElement):
+    return WaveFunctionElement(
+        exponentiateMatrix(-1j * theta.data / 2 * pauli_X),
+        WaveFunctionTokens.OPERATOR,
+    )
+
+
+def ry(theta: WaveFunctionElement):
+    return WaveFunctionElement(
+        exponentiateMatrix(-1j * theta.data / 2 * pauli_Y),
+        WaveFunctionTokens.OPERATOR,
+    )
+
+
+def rz(theta: WaveFunctionElement):
+    return WaveFunctionElement(
+        exponentiateMatrix(-1j * theta.data / 2 * pauli_Z),
+        WaveFunctionTokens.OPERATOR,
+    )
+
+
+def prob(a: WaveFunctionElement):
+    return WaveFunctionElement(a.data * np.conj(a.data), WaveFunctionTokens.SCALAR)
+
+
+# Supported function. Key is the string representation of the function, the first letter must be capitol, and the rest lowercase.
+# The value is a tuple with the left being the number of arguments and the right the function that evaluates it.
+wavefunction_functions = {
+    "√": (1, sqrt),
+    "Sr": (1, sqrt),
+    "Exp": (1, exponentiate_matrix_wv),
+    "Prob": (1, prob),
+    "Rx": (1, rx),
+    "Ry": (1, ry),
+    "Rz": (1, rz),
+    "Ctrl": (4, make_control_gate_tokens),
+}
