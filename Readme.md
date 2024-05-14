@@ -1,0 +1,1 @@
+To run tests: Run `python -m unittest discover -s test -p "*"`
