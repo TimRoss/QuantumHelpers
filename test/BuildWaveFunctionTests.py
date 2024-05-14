@@ -47,14 +47,14 @@ class BuildWaveFunctionTests(unittest.TestCase):
         )
 
     def test_BuildWaveFunctionSqrtSymbol(self):
-        tokens = ["(", "1", "/", "√", "2", ")", "(", "|0>", "+", "|1>", ")"]
+        tokens = ["(", "1", "/", "√", "(", "2", ")", ")", "(", "|0>", "+", "|1>", ")"]
         rtnPsi = qh.buildWaveFunction(tokens)
         TestHelpers.compareMatricies(
             self, rtnPsi.data, np.array([1 / np.sqrt(2), 1 / np.sqrt(2)])
         )
 
     def test_BuildWaveFunctionSqrtWord(self):
-        tokens = ["(", "1", "/", "Sr", "2", ")", "(", "|0>", "+", "|1>", ")"]
+        tokens = ["(", "1", "/", "Sr", "(", "2", ")", ")", "(", "|0>", "+", "|1>", ")"]
         rtnPsi = qh.buildWaveFunction(tokens)
         TestHelpers.compareMatricies(
             self, rtnPsi.data, np.array([1 / np.sqrt(2), 1 / np.sqrt(2)])
