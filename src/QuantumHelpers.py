@@ -9,6 +9,7 @@ from enum import Enum
 plottingAvailable = False
 try:
     from matplotlib import pyplot as plt
+    import matplotlib.cm as cm
     from matplotlib.patches import Circle
 
     plottingAvailable = True
@@ -320,14 +321,16 @@ class WaveFunctionElement:
         plt.plot([-2, 2], [-2, 2], "--", color="green")
 
         # Draw the actual state
-        num_states = int(np.log2(len(self.data)))
+        num_states = len(self.data)
+        colors = cm.rainbow(np.linspace(0, 1, num_states))
         i = -1
         j = -1
         overall_zero_part = 0
         overall_one_part = 0
         one_parts = []
         zero_parts = []
-        for state in range(num_states):
+        part_colors = []
+        for state in range(num_states // 2):
             i += 1
             j += 1
             if j == 2**qubit_index:
@@ -345,6 +348,10 @@ class WaveFunctionElement:
             zero_parts.append(zero_part)
             overall_one_part += one_part
             overall_zero_part += zero_part
+            if zero_part > 0:
+                part_colors.append(colors[i])
+            else:
+                part_colors.append(colors[i + 2**qubit_index])
         # normalize
         norm_factor = np.sqrt(overall_one_part**2 + overall_zero_part**2)
         if norm_factor > 0:
@@ -353,14 +360,14 @@ class WaveFunctionElement:
         
         overall_zero_part = 0
         overall_one_part = 0
-        for state in range(num_states):
+        for state in range(num_states // 2):
             arrow_head_length = np.sqrt(one_parts[state] ** 2 + zero_parts[state] ** 2) * 0.1
             plt.arrow(
                 overall_one_part,
                 overall_zero_part,
                 one_parts[state],
                 zero_parts[state],
-                color="blue",
+                color=part_colors[state],
                 width=0.02,
                 head_width=arrow_head_length,
                 head_length=arrow_head_length,
