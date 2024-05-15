@@ -9,24 +9,24 @@ import QuantumHelpers as qh
 
 class QuantumElementTests(unittest.TestCase):
     def test_QEAddBraBra(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
-        y = qh.QuantumElement(np.array([0, 1]), qh.WaveFunctionTokens.BRA)
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
+        y = qh.WaveFunctionElement(np.array([0, 1]), qh.WaveFunctionTokens.BRA)
         z = x + y
         TestHelpers.compareMatricies(self, z.data, np.array([1, 1]))
         self.assertEqual(z.type, qh.WaveFunctionTokens.BRA)
 
     def test_QEAddKetKet(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
-        y = qh.QuantumElement(np.array([0, 1]), qh.WaveFunctionTokens.KET)
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
+        y = qh.WaveFunctionElement(np.array([0, 1]), qh.WaveFunctionTokens.KET)
         z = x + y
         TestHelpers.compareMatricies(self, z.data, np.array([1, 1]))
         self.assertEqual(z.type, qh.WaveFunctionTokens.KET)
 
     def test_QEAddOpOp(self):
-        x = qh.QuantumElement(
+        x = qh.WaveFunctionElement(
             np.array([[1, 0], [0, -1]]), qh.WaveFunctionTokens.OPERATOR
         )
-        y = qh.QuantumElement(
+        y = qh.WaveFunctionElement(
             np.array([[1, 0], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x + y
@@ -34,32 +34,32 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(z.type, qh.WaveFunctionTokens.OPERATOR)
 
     def test_QEAddMismatch(self):
-        x = qh.QuantumElement(np.array([[1, 0]]), qh.WaveFunctionTokens.KET)
-        y = qh.QuantumElement(
+        x = qh.WaveFunctionElement(np.array([[1, 0]]), qh.WaveFunctionTokens.KET)
+        y = qh.WaveFunctionElement(
             np.array([[1, 0], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x + y
         self.assertEqual(z, None)
 
     def test_QESubBraBra(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
-        y = qh.QuantumElement(np.array([0, 1]), qh.WaveFunctionTokens.BRA)
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
+        y = qh.WaveFunctionElement(np.array([0, 1]), qh.WaveFunctionTokens.BRA)
         z = x - y
         TestHelpers.compareMatricies(self, z.data, np.array([1, -1]))
         self.assertEqual(z.type, qh.WaveFunctionTokens.BRA)
 
     def test_QESubKetKet(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
-        y = qh.QuantumElement(np.array([0, 1]), qh.WaveFunctionTokens.KET)
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
+        y = qh.WaveFunctionElement(np.array([0, 1]), qh.WaveFunctionTokens.KET)
         z = x - y
         TestHelpers.compareMatricies(self, z.data, np.array([1, -1]))
         self.assertEqual(z.type, qh.WaveFunctionTokens.KET)
 
     def test_QESubOpOp(self):
-        x = qh.QuantumElement(
+        x = qh.WaveFunctionElement(
             np.array([[1, 0], [0, -1]]), qh.WaveFunctionTokens.OPERATOR
         )
-        y = qh.QuantumElement(
+        y = qh.WaveFunctionElement(
             np.array([[1, 0], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x - y
@@ -67,15 +67,15 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(z.type, qh.WaveFunctionTokens.OPERATOR)
 
     def test_QESubMismatch(self):
-        x = qh.QuantumElement(np.array([[1, 0]]), qh.WaveFunctionTokens.KET)
-        y = qh.QuantumElement(
+        x = qh.WaveFunctionElement(np.array([[1, 0]]), qh.WaveFunctionTokens.KET)
+        y = qh.WaveFunctionElement(
             np.array([[1, 0], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x - y
         self.assertEqual(z, None)
 
     def test_QEMulOpFloat(self):
-        x = qh.QuantumElement(
+        x = qh.WaveFunctionElement(
             np.array([[1, 0], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x * 5
@@ -83,15 +83,15 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(z.type, qh.WaveFunctionTokens.OPERATOR)
 
     def test_QEMulBraBra(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
-        y = qh.QuantumElement(np.array([0, 1]), qh.WaveFunctionTokens.BRA)
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
+        y = qh.WaveFunctionElement(np.array([0, 1]), qh.WaveFunctionTokens.BRA)
         z = x * y
         TestHelpers.compareMatricies(self, z.data, np.array([0, 1, 0, 0]))
         self.assertEqual(z.type, qh.WaveFunctionTokens.BRA)
 
     def test_QEMulBraKet(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
-        y = qh.QuantumElement(
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
+        y = qh.WaveFunctionElement(
             np.array([1 / np.sqrt(2), 1 / np.sqrt(2)]), qh.WaveFunctionTokens.KET
         )
         z = x * y
@@ -99,8 +99,8 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(z.type, qh.WaveFunctionTokens.SCALAR)
 
     def test_QEMulBraOp(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
-        y = qh.QuantumElement(
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
+        y = qh.WaveFunctionElement(
             np.array([[1, 3], [2, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x * y
@@ -108,33 +108,33 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(z.type, qh.WaveFunctionTokens.BRA)
 
     def test_QEMulKetBra(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
-        y = qh.QuantumElement(np.array([0, 1]), qh.WaveFunctionTokens.BRA)
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
+        y = qh.WaveFunctionElement(np.array([0, 1]), qh.WaveFunctionTokens.BRA)
         z = x * y
         TestHelpers.compareMatricies(self, z.data, np.array([[0, 1], [0, 0]]))
         self.assertEqual(z.type, qh.WaveFunctionTokens.OPERATOR)
 
     def test_QEMulKetKet(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
-        y = qh.QuantumElement(np.array([0, 1]), qh.WaveFunctionTokens.KET)
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
+        y = qh.WaveFunctionElement(np.array([0, 1]), qh.WaveFunctionTokens.KET)
         z = x * y
         TestHelpers.compareMatricies(self, z.data, np.array([0, 1, 0, 0]))
         self.assertEqual(z.type, qh.WaveFunctionTokens.KET)
 
     def test_QEOpKet(self):
-        x = qh.QuantumElement(
+        x = qh.WaveFunctionElement(
             np.array([[0, 1], [1, 0]]), qh.WaveFunctionTokens.OPERATOR
         )
-        y = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
+        y = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
         z = x * y
         TestHelpers.compareMatricies(self, z.data, np.array([0, 1]))
         self.assertEqual(z.type, qh.WaveFunctionTokens.KET)
 
     def test_QEMulOpOp(self):
-        x = qh.QuantumElement(
+        x = qh.WaveFunctionElement(
             np.array([[1, 2], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
-        y = qh.QuantumElement(
+        y = qh.WaveFunctionElement(
             np.array([[1, 3], [2, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x * y
@@ -142,7 +142,7 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(z.type, qh.WaveFunctionTokens.OPERATOR)
 
     def test_QEdivOpFloat(self):
-        x = qh.QuantumElement(
+        x = qh.WaveFunctionElement(
             np.array([[1, 0], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         y = np.sqrt(2)
@@ -153,10 +153,10 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(z.type, qh.WaveFunctionTokens.OPERATOR)
 
     def test_QEkronOpOp(self):
-        x = qh.QuantumElement(
+        x = qh.WaveFunctionElement(
             np.array([[1, 0], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
-        y = qh.QuantumElement(
+        y = qh.WaveFunctionElement(
             np.array([[0, 1], [1, 0]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x & y
@@ -181,31 +181,31 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(str(w), "[1 0]")
 
     def test_HadamardInRotation(self):
-        x = qh.eval("H|0>")
-        y = qh.eval("-1j(Rz(π))(Ry(π/2))|0>")
+        x = qh.eval("H")
+        y = qh.eval("(-1j(Rz(π))*(Ry(3 * π/2)))")
 
         TestHelpers.compareMatricies(self, x.data, y.data, places=7)
 
     def test_QEDaggerKet(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.KET)
         x = x.dagger()
         TestHelpers.compareMatricies(self, x.data, np.array([1, 0]))
         self.assertEqual(x.type, qh.WaveFunctionTokens.BRA)
 
     def test_QEDaggerKetImag(self):
-        x = qh.QuantumElement(np.array([1j, 0]), qh.WaveFunctionTokens.KET)
+        x = qh.WaveFunctionElement(np.array([1j, 0]), qh.WaveFunctionTokens.KET)
         x = x.dagger()
         TestHelpers.compareMatricies(self, x.data, np.array([-1j, 0]))
         self.assertEqual(x.type, qh.WaveFunctionTokens.BRA)
 
     def test_QEDaggerBra(self):
-        x = qh.QuantumElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
+        x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
         x = x.dagger()
         TestHelpers.compareMatricies(self, x.data, np.array([1, 0]))
         self.assertEqual(x.type, qh.WaveFunctionTokens.KET)
 
     def test_QEDaggerOp(self):
-        x = qh.QuantumElement(
+        x = qh.WaveFunctionElement(
             np.array([[1, 1], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         x = x.dagger()
@@ -213,7 +213,7 @@ class QuantumElementTests(unittest.TestCase):
         self.assertEqual(x.type, qh.WaveFunctionTokens.OPERATOR)
 
     def test_QEDaggerOpImag(self):
-        x = qh.QuantumElement(
+        x = qh.WaveFunctionElement(
             np.array([[1, 1j], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         x = x.dagger()
