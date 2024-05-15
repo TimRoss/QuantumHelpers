@@ -48,6 +48,11 @@ operators = {
 
 knownScalars = {"Pi": np.pi, "π": np.pi}
 
+ketPattern = r"^\|[0-1]+>"
+braPattern = r"^\<[01]+\|"
+ketDecPattern = r"^\|[1-9]d[0-9]+\>$"
+braDecPattern = r"^\<[1-9]d[0-9]+\|"
+
 
 class WaveFunctionTokens(Enum):
     """Types of tokens for the wavefunction tokens. These will determine the interactions between different elements."""
@@ -324,34 +329,48 @@ class WaveFunctionElement:
             printStates(self.data)
 
 
-def buildKet(aKet):
+def buildKet(a_ket: str) -> WaveFunctionElement:
     """
-    Build a numpy array of the passed in ket string.
+    Build a WaveFunctionElement of the string ket passed in.
 
     Args:
-        aKet (string): String of 1s and 0s for the states of the Ket. Must match '|xxx>' format (with the xs representing 1s and 0s)
+        a_ket (string): String representation of ket in (assumed) binary or (specified with xd) decimal. Ex. |001> or |3d1>
     """
-    # Verify input has the correct format
-    if not re.match("^|[0-1]+>", aKet):
-        print("Argument passed to buildKet does not match expected ket format.")
-        return -1
-    localKet = 1 + 0j
+    ket_string = ""
+    if re.match(ketDecPattern, a_ket):
+        ket_string = str(bin(int(a_ket[3:4])))[2:].zfill(int(a_ket[1:2]))
+    elif re.match(ketPattern, a_ket):
+        ket_string = a_ket[1:-1]
+    else:
+        print(f"Argument passed to buildKet does not match expected ket format. Got {a_ket}")
+        return None
+    local_ket = 1
     # Goes through each character from the argument excluding the start and end characters
-    for i in aKet[1:-1]:
-        localKet = np.kron(localKet, unitKets[int(i)])
-    return WaveFunctionElement(localKet, WaveFunctionTokens.KET)
+    for i in ket_string:
+        local_ket = np.kron(local_ket, unitKets[int(i)])
+    return WaveFunctionElement(local_ket, WaveFunctionTokens.KET)
 
 
-def buildBra(aBra):
-    # Verify input has the correct format
-    if not re.match("^<[0-1]+|", aBra):
-        print("Argument passed to buildKet does not match expected ket format.")
-        return -1
-    localBra = 1 + 0j
+def buildBra(a_bra: str) -> WaveFunctionElement:
+    """
+    Build a WaveFunctionElement of the string bra passed in.
+
+    Args:
+        a_bra (string): String representation of bra in (assumed) binary or (specified with xd) decimal. Ex. <001| or <3d1|
+    """
+    bra_string = ""
+    if re.match(braDecPattern, a_bra):
+        bra_string = str(bin(int(a_bra[3:4])))[2:].zfill(int(a_bra[1:2]))
+    elif re.match(braPattern, a_bra):
+        bra_string = a_bra[1:-1]
+    else:
+        print(f"Argument passed to buildBra does not match expected bra format. Got {a_bra}")
+        return None
+    local_bra = 1
     # Goes through each character from the argument excluding the start and end characters
-    for i in aBra[1:-1]:
-        localBra = np.kron(localBra, unitKets[int(i)])
-    return WaveFunctionElement(localBra, WaveFunctionTokens.BRA)
+    for i in bra_string:
+        local_bra = np.kron(local_bra, unitKets[int(i)])
+    return WaveFunctionElement(local_bra, WaveFunctionTokens.BRA)
 
 
 def printStates(aKet):
@@ -677,8 +696,10 @@ def buildWaveFunction(tokens, over_function: str = None):
     patterns = []
 
     patterns.append(("operator", r"^[A-Z][a-z]*", getOperator))
-    patterns.append(("ket", r"^\|[01]+\>$", buildKet))
-    patterns.append(("bra", r"^\<[01]+\|", buildBra))
+    patterns.append(("ket", ketPattern, buildKet))
+    patterns.append(("ket", ketDecPattern, buildKet))
+    patterns.append(("bra", braPattern, buildBra))
+    patterns.append(("bra", braDecPattern, buildBra))
     patterns.append(("scalar", r"^[0-9.j]+$", getScalar))
     patterns.append(("neg scalar", r"^-[0-9.j]+$", getScalar))
     patterns.append(("arithmetic", r"^[+\-*/]$", getArithmetic))
@@ -697,6 +718,9 @@ def buildWaveFunction(tokens, over_function: str = None):
             print(f"ERROR: Function {over_function} is not a known function.")
             return None
         expected_args = wavefunction_functions[over_function][0]
+
+        # Add a paren onto the stack if this we are evaluating the arguments for a function
+        # Each argument gets evaluated and placed on the stack individually
         openParenStack.append(-1)
 
     if DEBUG:
@@ -758,11 +782,14 @@ def buildWaveFunction(tokens, over_function: str = None):
                         print(f"Identified {token} as {pattern[0]}")
                     token_element = pattern[2](token)                    
                     break
+        # Handle token by putting the token_element onto the stack.
         if token_handled:
             continue
         if token_element is None:
             print(f"ERROR: token not recognized: {token}")
             return None
+        # If they type is changing from the last token, evaluate the current stack and then stick onto overall stack
+        # This basically defines an order of operations by keeping similar types together
         if prev_type is not None and token_element.type != prev_type:
             overallStack.append(evaluateStack(currentTermStack))
             currentTermStack = []

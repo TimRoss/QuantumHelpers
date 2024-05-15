@@ -255,3 +255,29 @@ class OtherTests(unittest.TestCase):
             y = qh.eval(expected[i])
             result = cx * x
             TestHelpers.compareMatricies(self, result.data, y.data)
+    
+    def test_buildKetBinary1(self):
+        result0 = qh.buildKet("|0>")
+        result1 = qh.buildKet("|1>")
+        TestHelpers.compareMatricies(self, result0.data, np.array([1,0]))
+        TestHelpers.compareMatricies(self, result1.data, np.array([0,1]))
+
+    def test_buildKetBinary2(self):
+        result0 = qh.buildKet("|00>")
+        result1 = qh.buildKet("|01>")
+        result2 = qh.buildKet("|10>")
+        result3 = qh.buildKet("|11>")
+        TestHelpers.compareMatricies(self, result0.data, np.array([1,0,0,0]))
+        TestHelpers.compareMatricies(self, result1.data, np.array([0,1,0,0]))
+        TestHelpers.compareMatricies(self, result2.data, np.array([0,0,1,0]))
+        TestHelpers.compareMatricies(self, result3.data, np.array([0,0,0,1]))
+
+    def test_buildKetDecimal2(self):
+        result0 = qh.buildKet("|2d0>")
+        result1 = qh.buildKet("|2d1>")
+        result2 = qh.buildKet("|2d2>")
+        result3 = qh.buildKet("|2d3>")
+        TestHelpers.compareMatricies(self, result0.data, np.array([1,0,0,0]))
+        TestHelpers.compareMatricies(self, result1.data, np.array([0,1,0,0]))
+        TestHelpers.compareMatricies(self, result2.data, np.array([0,0,1,0]))
+        TestHelpers.compareMatricies(self, result3.data, np.array([0,0,0,1]))
