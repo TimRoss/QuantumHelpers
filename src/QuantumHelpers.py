@@ -50,8 +50,8 @@ knownScalars = {"Pi": np.pi, "π": np.pi}
 
 ketPattern = r"^\|[0-1]+>"
 braPattern = r"^\<[01]+\|"
-ketDecPattern = r"^\|[1-9]d[0-9]+\>$"
-braDecPattern = r"^\<[1-9]d[0-9]+\|"
+ketDecPattern = r"^\|[1-9]d\d+\>$"
+braDecPattern = r"^\<[1-9]d\d+\|"
 
 
 class WaveFunctionTokens(Enum):
@@ -80,24 +80,24 @@ class WaveFunctionElement:
         Overloaded + : Add 2 elements together. Elements must be of the same type.
         """
         if not isinstance(other, WaveFunctionElement):
-            return self.printNotSupported()
+            return self.print_not_supported()
 
         if self.type == other.type:
             return WaveFunctionElement(self.data + other.data, self.type)
         else:
-            self.printError(other, "add")
+            self.print_error(other, "add")
 
     def __sub__(self, other):
         """
         Overloaded - : Subtract other element from this element. Elements must be of the same type.
         """
         if not isinstance(other, WaveFunctionElement):
-            return self.printNotSupported()
+            return self.print_not_supported()
 
         if self.type == other.type:
             return WaveFunctionElement(self.data - other.data, self.type)
         else:
-            self.printError(other, "subtract")
+            self.print_error(other, "subtract")
 
     def __mul__(self, other):
         """
@@ -117,7 +117,7 @@ class WaveFunctionElement:
         if isinstance(other, numbers.Number):
             return WaveFunctionElement(self.data * other, self.type)
         if not isinstance(other, WaveFunctionElement):
-            return self.printNotSupported()
+            return self.print_not_supported()
 
         # Some quick logic to handle scalars because it is simple
         if self.type == WaveFunctionTokens.SCALAR:
@@ -139,7 +139,7 @@ class WaveFunctionElement:
                             self.data @ other.data, WaveFunctionTokens.BRA
                         )
                     case _:
-                        return self.printError(other, "multiply")
+                        return self.print_error(other, "multiply")
             case WaveFunctionTokens.KET:
                 match other.type:
                     case WaveFunctionTokens.BRA:
@@ -149,7 +149,7 @@ class WaveFunctionElement:
                     case WaveFunctionTokens.KET:
                         return self & other
                     case _:
-                        return self.printError(other, "multiply")
+                        return self.print_error(other, "multiply")
             case WaveFunctionTokens.OPERATOR:
                 match other.type:
                     case WaveFunctionTokens.KET:
@@ -161,9 +161,9 @@ class WaveFunctionElement:
                             self.data @ other.data, WaveFunctionTokens.OPERATOR
                         )
                     case _:
-                        return self.printError(other, "multiply")
+                        return self.print_error(other, "multiply")
             case _:
-                return self.printError(other, "multiply")
+                return self.print_error(other, "multiply")
 
     def __truediv__(self, other):
         """
@@ -173,20 +173,20 @@ class WaveFunctionElement:
         if isinstance(other, numbers.Number):
             return WaveFunctionElement(self.data / other, self.type)
         if not isinstance(other, WaveFunctionElement):
-            return self.printNotSupported()
+            return self.print_not_supported()
 
         # Division is only supported with scalars
         if other.type == WaveFunctionTokens.SCALAR:
             return WaveFunctionElement(self.data / other.data, self.type)
         else:
-            self.printError(other, "divide")
+            self.print_error(other, "divide")
 
     def __and__(self, other):
         """
         Overloaded & : Kronecker product elements together. Types must be the same
         """
         if not isinstance(other, WaveFunctionElement):
-            return self.printNotSupported()
+            return self.print_not_supported()
 
         # Since python does not have a kron, use & as kron symbol
         if self.type == other.type and self.type in [
@@ -196,9 +196,9 @@ class WaveFunctionElement:
         ]:
             return WaveFunctionElement(np.kron(self.data, other.data), self.type)
         else:
-            self.printError(other, "kron")
+            self.print_error(other, "kron")
 
-    def printError(self, other, operation):
+    def print_error(self, other, operation):
         """
         Print an error to stdout in a standardized way.
 
@@ -213,7 +213,7 @@ class WaveFunctionElement:
             )
         )
 
-    def printNotSupported(self):
+    def print_not_supported(self):
         """
         Standard error message when an interation is not supported.
         """
@@ -235,7 +235,7 @@ class WaveFunctionElement:
             case WaveFunctionTokens.OPERATOR:
                 return str(vPrettyWaveFunctionAmplitude(self.data)).replace("'", "")
             case WaveFunctionTokens.SCALAR:
-                return str(prettyWaveFunctionAmplitude(self.data)).replace("'", "")
+                return str(pretty_wave_function_amplitude(self.data)).replace("'", "")
             case WaveFunctionTokens.ARITHMETIC:
                 return self.data
             case _:
@@ -267,10 +267,10 @@ class WaveFunctionElement:
 
         axs = plt.subplots(1, 2, layout="constrained", figsize=(10, 5))
 
-        self._addStatePlot(axs[1][0], False)
-        self._addStatePlot(axs[1][1], True)
+        self._add_state_plot(axs[1][0], False)
+        self._add_state_plot(axs[1][1], True)
 
-    def _addStatePlot(self, ax, imag: bool):
+    def _add_state_plot(self, ax, imag: bool):
         if imag:
             x = self.data.imag
             title = "Imaginary"
@@ -304,8 +304,8 @@ class WaveFunctionElement:
         ax3.set_yticks([0], labels="")
 
         # Draw circle at len=1
-        normCircle = Circle((0, 0), 1, linestyle="--", fill=False, color="black")
-        ax.add_patch(normCircle)
+        norm_circle = Circle((0, 0), 1, linestyle="--", fill=False, color="black")
+        ax.add_patch(norm_circle)
 
         # Draw x-axis
         plt.plot([-2, 2], [-2, 2], "--", color="green")
@@ -326,10 +326,10 @@ class WaveFunctionElement:
 
     def print(self):
         if self.type == WaveFunctionTokens.KET:
-            printStates(self.data)
+            print_states(self.data)
 
 
-def buildKet(a_ket: str) -> WaveFunctionElement:
+def build_ket(a_ket: str) -> WaveFunctionElement:
     """
     Build a WaveFunctionElement of the string ket passed in.
 
@@ -351,7 +351,7 @@ def buildKet(a_ket: str) -> WaveFunctionElement:
     return WaveFunctionElement(local_ket, WaveFunctionTokens.KET)
 
 
-def buildBra(a_bra: str) -> WaveFunctionElement:
+def build_bra(a_bra: str) -> WaveFunctionElement:
     """
     Build a WaveFunctionElement of the string bra passed in.
 
@@ -373,106 +373,105 @@ def buildBra(a_bra: str) -> WaveFunctionElement:
     return WaveFunctionElement(local_bra, WaveFunctionTokens.BRA)
 
 
-def printStates(aKet):
-    numberOfQubits = int(np.log2(aKet.size))
-    currentState = -1
-    for state, coefficient in enumerate(aKet):
+def print_states(a_ket):
+    number_of_qubits = int(np.log2(a_ket.size))
+    for state, coefficient in enumerate(a_ket):
         if coefficient == 0:
             continue
         print(
             "{c} |{s}>".format(
-                c=prettyWaveFunctionAmplitude(coefficient),
-                s=bin(state)[2:].zfill(numberOfQubits),
+                c=pretty_wave_function_amplitude(coefficient),
+                s=bin(state)[2:].zfill(number_of_qubits),
             )
         )
 
 
-def toString(aKet):
-    if type(aKet) == tuple:
-        match aKet.type:
+def to_string(a_ket):
+    if type(a_ket) == tuple:
+        match a_ket.type:
             case WaveFunctionTokens.SCALAR:
-                return str(aKet.data)
+                return str(a_ket.data)
             case WaveFunctionTokens.OPERATOR:
-                return vPrettyWaveFunctionAmplitude(aKet.data)
+                return vPrettyWaveFunctionAmplitude(a_ket.data)
             case WaveFunctionTokens.KET:
-                return toString(aKet.data)
+                return to_string(a_ket.data)
             case WaveFunctionTokens.BRA:
-                return toString(aKet.data)
-    numberOfQubits = int(np.log2(aKet.size))
+                return to_string(a_ket.data)
+    number_of_qubits = int(np.log2(a_ket.size))
     psi = ""
-    for state, coefficient in enumerate(aKet):
+    for state, coefficient in enumerate(a_ket):
         if coefficient == 0:
             continue
         if len(psi) > 0:
             psi = psi + " + "
         psi = psi + "{c} |{s}>".format(
-            c=prettyWaveFunctionAmplitude(coefficient),
-            s=bin(state)[2:].zfill(numberOfQubits),
+            c=pretty_wave_function_amplitude(coefficient),
+            s=bin(state)[2:].zfill(number_of_qubits),
         )
     return psi
 
 
 # Density Matrix
-def makeDensityMatrix(waveFunction):
-    numberOfQubits = int(np.log2(waveFunction.size))
-    totalDensity = np.zeros((waveFunction.size, waveFunction.size))
-    currentOuterState = -1
-    currentInnerState = -1
-    for outerState in waveFunction:
-        currentOuterState = currentOuterState + 1
-        localBra = buildBra(
-            "<" + bin(currentOuterState)[2:].zfill(numberOfQubits) + "|"
+def make_density_matrix(wave_function):
+    number_of_qubits = int(np.log2(wave_function.size))
+    total_density = np.zeros((wave_function.size, wave_function.size))
+    current_outer_state = -1
+    current_inner_state = -1
+    for outer_state in wave_function:
+        current_outer_state = current_outer_state + 1
+        local_bra = build_bra(
+            "<" + bin(current_outer_state)[2:].zfill(number_of_qubits) + "|"
         )
-        localBra = localBra * outerState
-        currentInnerState = -1
-        for innerState in waveFunction:
-            currentInnerState = currentInnerState + 1
-            localKet = buildKet(
-                "|" + bin(currentInnerState)[2:].zfill(numberOfQubits) + ">"
+        local_bra = local_bra * outer_state
+        current_inner_state = -1
+        for inner_state in wave_function:
+            current_inner_state = current_inner_state + 1
+            local_ket = build_ket(
+                "|" + bin(current_inner_state)[2:].zfill(number_of_qubits) + ">"
             )
-            localKet = localKet * innerState
-            stateDensity = np.outer(localBra, localKet)
-            totalDensity = totalDensity + stateDensity
-    return totalDensity
+            local_ket = local_ket * inner_state
+            state_density = np.outer(local_bra, local_ket)
+            total_density = total_density + state_density
+    return total_density
 
 
-def chainedKron(aListToKron):
-    localKron = 1
-    for i in aListToKron:
-        localKron = np.kron(localKron, i)
-    return localKron
+def chained_kron(a_list_to_kron):
+    local_kron = 1
+    for i in a_list_to_kron:
+        local_kron = np.kron(local_kron, i)
+    return local_kron
 
 
-def findFraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, int]:
-    maxDenom = 16
+def find_fraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, int]:
+    max_denominator = 16
     tolerance = 1e-8
 
-    isComplex = True if type(n) == complex else False
-    isNegative = False
+    is_complex = True if type(n) == complex else False
+    is_negative = False
 
     # Local variables to keep track of return values
     denominator = 0
     numerator = 0
-    imagNumerator = 0
-    imagDenominator = 0
+    imag_numerator = 0
+    image_denominator = 0
 
     # If the passed in value in complex, make a recursive call to find the fraction for the imaginary part
-    if isComplex:
-        imagNumerator, imagDenominator = findFraction(n.imag)
-        isNegative = n.real < 0
+    if is_complex:
+        imag_numerator, image_denominator = find_fraction(n.imag)
+        is_negative = n.real < 0
         p = np.abs(n.real)
     else:
-        isNegative = n < 0
+        is_negative = n < 0
         p = np.abs(n)
 
     # Check some edge cases and return fast if n is 0 or one
     if p < tolerance and p >= 0:
-        return (0, 0) if not isComplex else (0, 0, imagNumerator, imagDenominator)
+        return (0, 0) if not is_complex else (0, 0, imag_numerator, image_denominator)
     if p < 1 + tolerance and p > 1 - tolerance:
-        return (1, 1) if not isComplex else (1, 1, imagNumerator, imagDenominator)
+        return (1, 1) if not is_complex else (1, 1, imag_numerator, image_denominator)
 
     # Brute force check every possible numerator for each denominator between 0 and maxDenom
-    for denom in range(1, maxDenom + 1):
+    for denom in range(1, max_denominator + 1):
         if numerator != 0:
             break
         for numer in reversed(range(1, denom)):
@@ -483,119 +482,119 @@ def findFraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, i
                     denominator = denom
                     break
 
-    if isNegative:
+    if is_negative:
         numerator = numerator * -1
 
-    if isComplex:
-        return numerator, denominator, imagNumerator, imagDenominator
+    if is_complex:
+        return numerator, denominator, imag_numerator, image_denominator
     else:
         return numerator, denominator
 
 
-def prettyWaveFunctionAmplitude(n) -> str:
+def pretty_wave_function_amplitude(n) -> str:
     tolerance = 1e-8
-    sqrtSymbol = "\u221A"
+    sqrt_symbol = "\u221A"
 
-    complexString = ""
+    complex_string = ""
     if np.abs(n.imag) > tolerance:
-        complexString = prettyWaveFunctionAmplitude(n.imag)
+        complex_string = pretty_wave_function_amplitude(n.imag)
         if n.imag > 0:
-            complexString = "+" + complexString
-        complexString = complexString + "j"
+            complex_string = "+" + complex_string
+        complex_string = complex_string + "j"
 
     if abs(n.real) < tolerance:
-        return "0{c}".format(c=complexString)
+        return "0{c}".format(c=complex_string)
 
-    numerator, denominator = findFraction(n.real**2)
+    numerator, denominator = find_fraction(n.real**2)
 
     # If a fraction for the number cannot be found
     if denominator == 0:
-        return "{:.3f}{c}".format(n.real, c=complexString)
+        return "{:.3f}{c}".format(n.real, c=complex_string)
 
     # If fraction is nearly zero
     if numerator / denominator < tolerance:
-        return "0{c}".format(c=complexString)
+        return "0{c}".format(c=complex_string)
     # If fraction is nearly 1
     if numerator / denominator > (1 - tolerance) and numerator / denominator < (
         1 + tolerance
     ):
         if n.real < 0:
-            return "-1{c}".format(c=complexString)
-        return "1{c}".format(c=complexString)
+            return "-1{c}".format(c=complex_string)
+        return "1{c}".format(c=complex_string)
 
-    numeratorIsRootable = False
-    denominatorIsRootable = False
+    numerator_is_rootable = False
+    denominator_is_rootable = False
     if (
         np.sqrt(np.abs(numerator)) % 1 < tolerance
         or (1 - (np.sqrt(np.abs(numerator)) % 1)) < tolerance
     ):
-        numeratorIsRootable = True
+        numerator_is_rootable = True
     if (
         np.sqrt(denominator) % 1 < tolerance
         or (1 - (np.sqrt(denominator) % 1)) < tolerance
     ):
-        denominatorIsRootable = True
+        denominator_is_rootable = True
 
-    numeratorString = (
+    numerator_string = (
         str(int(np.sqrt(numerator)))
-        if numeratorIsRootable
-        else sqrtSymbol + str(int(numerator))
+        if numerator_is_rootable
+        else sqrt_symbol + str(int(numerator))
     )
-    denominatorString = (
+    denominator_string = (
         str(int(np.sqrt(denominator)))
-        if denominatorIsRootable
-        else sqrtSymbol + str(int(denominator))
+        if denominator_is_rootable
+        else sqrt_symbol + str(int(denominator))
     )
 
     if n.real < 0:
-        numeratorString = "-" + numeratorString
+        numerator_string = "-" + numerator_string
 
-    return "{n}/{d}{c}".format(n=numeratorString, d=denominatorString, c=complexString)
-
-
-vPrettyWaveFunctionAmplitude = np.vectorize(prettyWaveFunctionAmplitude)
+    return "{n}/{d}{c}".format(n=numerator_string, d=denominator_string, c=complex_string)
 
 
-def prettyFraction(n) -> str:
+vPrettyWaveFunctionAmplitude = np.vectorize(pretty_wave_function_amplitude)
+
+
+def pretty_fraction(n) -> str:
     tolerance = 1e-8
 
-    complexString = ""
+    complex_string = ""
     if n.imag > tolerance:
-        complexString = prettyFraction(n.imag)
-        if "-" not in complexString:
-            complexString = "+" + complexString
-        complexString = complexString + "j"
+        complex_string = pretty_fraction(n.imag)
+        if "-" not in complex_string:
+            complex_string = "+" + complex_string
+        complex_string = complex_string + "j"
 
     if n.real == 0:
-        return "0{c}".format(c=complexString)
+        return "0{c}".format(c=complex_string)
 
-    numerator, denominator = findFraction(n.real)
+    numerator, denominator = find_fraction(n.real)
 
     # If a fraction for the number cannot be found
     if denominator == 0:
-        return "{r}{c}".format(r=str(n.real), c=complexString)
+        return "{r}{c}".format(r=str(n.real), c=complex_string)
 
     # If fraction is nearly zero
     if numerator / denominator < tolerance:
-        return "0{c}".format(c=complexString)
+        return "0{c}".format(c=complex_string)
     # If fraction is nearly 1
     if numerator / denominator > (1 - tolerance) and numerator / denominator < (
         1 + tolerance
     ):
         if n < 0:
-            return "-1{c}".format(c=complexString)
-        return "1{c}".format(c=complexString)
+            return "-1{c}".format(c=complex_string)
+        return "1{c}".format(c=complex_string)
 
-    numeratorString = str(numerator)
-    denominatorString = str(denominator)
+    numerator_string = str(numerator)
+    denominator_string = str(denominator)
 
     if n < 0:
-        numeratorString = "-" + numeratorString
+        numerator_string = "-" + numerator_string
 
-    return "{n}/{d}{c}".format(n=numeratorString, d=denominatorString, c=complexString)
+    return "{n}/{d}{c}".format(n=numerator_string, d=denominator_string, c=complex_string)
 
 
-vPrettyFraction = np.vectorize(prettyFraction)
+vPrettyFraction = np.vectorize(pretty_fraction)
 
 
 def make_control_gate(control, target, gate, total_qubits):
@@ -627,89 +626,91 @@ def make_control_gate(control, target, gate, total_qubits):
     return eval(control_string + " + " + target_string)
 
 
-def tokenizeWaveFunctionString(stringstrong):
-    # Tokenize a string
-    # Characters to tokenize on: <, >, |, Capitol Letters, spaces
-    soloTokenPattern = r"^[\+*-,/()√π? ]"
-    beginPattern = r"[<A-Z]"
-    endPattern = r">"
+def tokenize_wave_function_string(stringstrong: str):
+    '''
+    Tokenize the string passed in into tokens that can be converted into WaveFunctionElements
+    Args:
+        stringstrong (str): String to be tokenized. This string should represent a wavefunction.
+    '''
+    solo_token_pattern = r"^[\+*-,/()√π? ]"
+    begin_token_pattern = r"[<A-Z]"
+    end_token_pattern = r">"
     vert = "|"
     tokens = []
-    # Is it easiest to just loop through characters?
-    currentToken = ""
+    current_token = ""
     for character in stringstrong:
-        startOfToken = False
-        endOfToken = False
-        if re.search(soloTokenPattern, character) is not None:
-            startOfToken = True
-            endOfToken = True
-        elif re.search(beginPattern, character) is not None:
-            startOfToken = True
-        elif re.search(endPattern, character) is not None:
-            endOfToken = True
+        start_of_token = False
+        end_of_token = False
+        if re.search(solo_token_pattern, character) is not None:
+            start_of_token = True
+            end_of_token = True
+        elif re.search(begin_token_pattern, character) is not None:
+            start_of_token = True
+        elif re.search(end_token_pattern, character) is not None:
+            end_of_token = True
         elif character == vert:
-            if currentToken == "":
-                startOfToken = True
-            elif currentToken[0] == "<":
-                endOfToken = True
+            if current_token == "":
+                start_of_token = True
+            elif current_token[0] == "<":
+                end_of_token = True
             else:
-                startOfToken = True
+                start_of_token = True
 
         # Handle the tokens and currentToken for if it is the start, end, or middle of the token
-        if startOfToken and endOfToken:
-            if currentToken != "":
-                tokens.append(currentToken)
+        if start_of_token and end_of_token:
+            if current_token != "":
+                tokens.append(current_token)
             if character != " ":
                 tokens.append(character)
-            currentToken = ""
-        elif startOfToken:
-            if currentToken != "":
-                tokens.append(currentToken)
-            currentToken = character
-        elif endOfToken:
-            currentToken = currentToken + character
-            tokens.append(currentToken)
-            currentToken = ""
+            current_token = ""
+        elif start_of_token:
+            if current_token != "":
+                tokens.append(current_token)
+            current_token = character
+        elif end_of_token:
+            current_token = current_token + character
+            tokens.append(current_token)
+            current_token = ""
         else:
-            currentToken = currentToken + character
+            current_token = current_token + character
 
     # If there is anything left at the end, add it to tokens
-    if currentToken != "":
-        tokens.append(currentToken)
+    if current_token != "":
+        tokens.append(current_token)
     return tokens
 
 
 def eval(psi: str, *insert_elements) -> WaveFunctionElement:
-    tokens = tokenizeWaveFunctionString(psi)
+    tokens = tokenize_wave_function_string(psi)
     insert_elements_stack = list(insert_elements)
     insert_elements_stack.reverse() # reverse so that elements can be popped off
-    return buildWaveFunction(tokens, insert_elements=insert_elements_stack)
+    return build_wave_function(tokens, insert_elements=insert_elements_stack)
 
-def getOperator(op: str) -> WaveFunctionElement:
+def build_operator(op: str) -> WaveFunctionElement:
     return WaveFunctionElement(operators[op], WaveFunctionTokens.OPERATOR)
 
-def getScalar(s: str) -> WaveFunctionElement:
+def build_scalar(s: str) -> WaveFunctionElement:
     return WaveFunctionElement(complex(s), WaveFunctionTokens.SCALAR)
 
-def getArithmetic(a: str) -> WaveFunctionElement:
+def build_arithmetic(a: str) -> WaveFunctionElement:
     return WaveFunctionElement(a, WaveFunctionTokens.ARITHMETIC)
 
-def buildWaveFunction(tokens:list, insert_elements:list = None, over_function: str = None):
+def build_wave_function(tokens:list, insert_elements:list = None, over_function: str = None):
     patterns = []
 
-    patterns.append(("operator", r"^[A-Z][a-z]*", getOperator))
-    patterns.append(("ket", ketPattern, buildKet))
-    patterns.append(("ket", ketDecPattern, buildKet))
-    patterns.append(("bra", braPattern, buildBra))
-    patterns.append(("bra", braDecPattern, buildBra))
-    patterns.append(("scalar", r"^[0-9.j]+$", getScalar))
-    patterns.append(("neg scalar", r"^-[0-9.j]+$", getScalar))
-    patterns.append(("arithmetic", r"^[+\-*/]$", getArithmetic))
-    parenPattern = r"^[(,)]$"
+    patterns.append(("operator", r"^[A-Z][a-z]*", build_operator))
+    patterns.append(("ket", ketPattern, build_ket))
+    patterns.append(("ket", ketDecPattern, build_ket))
+    patterns.append(("bra", braPattern, build_bra))
+    patterns.append(("bra", braDecPattern, build_bra))
+    patterns.append(("scalar", r"^[0-9.j]+$", build_scalar))
+    patterns.append(("neg scalar", r"^-[0-9.j]+$", build_scalar))
+    patterns.append(("arithmetic", r"^[+\-*/]$", build_arithmetic))
+    paren_pattern = r"^[(,)]$"
 
-    openParenStack = []
-    overallStack = []
-    currentTermStack = []
+    open_paren_stack = []
+    overall_stack = []
+    current_term_stack = []
 
     token_element = None
     prev_type = None
@@ -723,7 +724,7 @@ def buildWaveFunction(tokens:list, insert_elements:list = None, over_function: s
 
         # Add a paren onto the stack if this we are evaluating the arguments for a function
         # Each argument gets evaluated and placed on the stack individually
-        openParenStack.append(-1)
+        open_paren_stack.append(-1)
 
     if DEBUG:
         print("building " + str(tokens))
@@ -734,37 +735,37 @@ def buildWaveFunction(tokens:list, insert_elements:list = None, over_function: s
     # farther up that will also match more general patterns below.
     for i, token in enumerate(tokens):
         token_handled = False # Once the current token is considered to be handled, this is set to true
-        if re.search(parenPattern, token):
+        if re.search(paren_pattern, token):
             if DEBUG:
                 print(f"paren {token}")
             if token == "(":
-                openParenStack.append(i)
+                open_paren_stack.append(i)
                 token_handled = True
             elif token == ",":
                 # Only handle comma if at top level, which is when open paren stack has 1
-                if len(openParenStack) == 1 and over_function is not None:
+                if len(open_paren_stack) == 1 and over_function is not None:
                     # Evaluate from the previous comma to the comma, which will eval the argument
-                    openingParenIndex = openParenStack.pop()
-                    arg = buildWaveFunction(tokens[openingParenIndex + 1 : i], insert_elements=insert_elements)
-                    overallStack.append(arg)
-                    openParenStack.append(i)
+                    opening_paren_index = open_paren_stack.pop()
+                    arg = build_wave_function(tokens[opening_paren_index + 1 : i], insert_elements=insert_elements)
+                    overall_stack.append(arg)
+                    open_paren_stack.append(i)
                     expected_args -= 1
                 token_handled = True
             elif token == ")":
-                if len(openParenStack) == 0:
+                if len(open_paren_stack) == 0:
                     print("ERROR: Got a closing paren without a matching opening paren")
                     return None
                 # Only handle the outermost parens, inner parens will be handled by the recursive call
-                openingParenIndex = openParenStack.pop()
-                if len(openParenStack) == 0:
+                opening_paren_index = open_paren_stack.pop()
+                if len(open_paren_stack) == 0:
                     # Make a recursive call to this function to handle the stuff inside the parens
-                    token_element = buildWaveFunction(
-                        tokens[openingParenIndex + 1 : i], insert_elements=insert_elements, over_function= current_function
+                    token_element = build_wave_function(
+                        tokens[opening_paren_index + 1 : i], insert_elements=insert_elements, over_function= current_function
                     )
                     current_function = None
                 else:
                     token_handled = True
-        elif len(openParenStack) > 0:
+        elif len(open_paren_stack) > 0:
             token_handled = True
         elif token in wavefunction_functions:
             if DEBUG:
@@ -798,9 +799,9 @@ def buildWaveFunction(tokens:list, insert_elements:list = None, over_function: s
         # If they type is changing from the last token, evaluate the current stack and then stick onto overall stack
         # This basically defines an order of operations by keeping similar types together
         if prev_type is not None and token_element.type != prev_type:
-            overallStack.append(evaluateStack(currentTermStack))
-            currentTermStack = []
-        currentTermStack.append(token_element)
+            overall_stack.append(evaluate_stack(current_term_stack))
+            current_term_stack = []
+        current_term_stack.append(token_element)
         prev_type = token_element.type
 
 
@@ -812,17 +813,17 @@ def buildWaveFunction(tokens:list, insert_elements:list = None, over_function: s
                 f"ERROR: Incorrect number of arguments for {over_function}, expected {wavefunction_functions[over_function][0]}"
             )
         else:
-            openingParenIndex = openParenStack.pop()
-            overallStack.append(buildWaveFunction(tokens[openingParenIndex + 1 :]))
-            overallStack.append(
+            opening_paren_index = open_paren_stack.pop()
+            overall_stack.append(build_wave_function(tokens[opening_paren_index + 1 :]))
+            overall_stack.append(
                 WaveFunctionElement(over_function, WaveFunctionTokens.FUNCTION)
             )
-    if len(openParenStack) > 0:
+    if len(open_paren_stack) > 0:
         print("ERROR: Unclosed parenthesis")
-    return evaluateStack(overallStack + currentTermStack)
+    return evaluate_stack(overall_stack + current_term_stack)
 
 
-def evaluateStack(stack):
+def evaluate_stack(stack):
     if DEBUG:
         print("Evaluating stack: ")
         for i in stack:
@@ -845,9 +846,9 @@ def evaluateStack(stack):
         ):
             arithmetic = left
             left = stack.pop()
-            result = evaluateExplicit(left=left, arithmetic=arithmetic, right=right)
+            result = evaluate_explicit(left=left, arithmetic=arithmetic, right=right)
         else:
-            result = evaluateImplicit(left=left, right=right)
+            result = evalute_implicit(left=left, right=right)
         stack.append(result)
 
     rtn = stack.pop()
@@ -856,7 +857,7 @@ def evaluateStack(stack):
     return rtn
 
 
-def evaluateExplicit(left, arithmetic, right):
+def evaluate_explicit(left, arithmetic, right):
     # Really only need to handle BRA, KET, and SCALAR in this method
     match arithmetic.data:
         case "+":
@@ -875,7 +876,7 @@ def evaluateExplicit(left, arithmetic, right):
     )
 
 
-def evaluateImplicit(left, right):
+def evalute_implicit(left, right):
     # For two operators together, use a kron product
     if (
         left.type == WaveFunctionTokens.OPERATOR
@@ -885,14 +886,14 @@ def evaluateImplicit(left, right):
     return left * right
 
 
-def readInWaveFunction(psi):
-    tokens = tokenizeWaveFunctionString(psi)
-    evaluatedPsi = buildWaveFunction(tokens)
-    return toString(evaluatedPsi.data)
+def read_in_wave_function(psi):
+    tokens = tokenize_wave_function_string(psi)
+    evaluated_psi = build_wave_function(tokens)
+    return to_string(evaluated_psi.data)
 
 
-def exponentiateMatrix(A):
-    eigenvalues, eigenvectors = np.linalg.eig(A)
+def exponentiate_matrix(a):
+    eigenvalues, eigenvectors = np.linalg.eig(a)
     tmp = np.diag(np.exp(eigenvalues))
     return eigenvectors @ tmp @ np.linalg.inv(eigenvectors)
 
@@ -927,7 +928,7 @@ def make_control_gate_tokens(acontrol: int, atarget: int, agate, atotal_qubits: 
             control_arr.append(np.eye(2))
             target_arr.append(np.eye(2))
     return WaveFunctionElement(
-        chainedKron(control_arr) + chainedKron(target_arr), WaveFunctionTokens.OPERATOR
+        chained_kron(control_arr) + chained_kron(target_arr), WaveFunctionTokens.OPERATOR
     )
 
 
@@ -936,26 +937,26 @@ def sqrt(a: WaveFunctionElement):
 
 
 def exponentiate_matrix_wv(a: WaveFunctionElement):
-    return WaveFunctionElement(exponentiateMatrix(a.data), a.type)
+    return WaveFunctionElement(exponentiate_matrix(a.data), a.type)
 
 
 def rx(theta: WaveFunctionElement):
     return WaveFunctionElement(
-        exponentiateMatrix(-1j * theta.data / 2 * pauli_X),
+        exponentiate_matrix(-1j * theta.data / 2 * pauli_X),
         WaveFunctionTokens.OPERATOR,
     )
 
 
 def ry(theta: WaveFunctionElement):
     return WaveFunctionElement(
-        exponentiateMatrix(-1j * theta.data / 2 * pauli_Y),
+        exponentiate_matrix(-1j * theta.data / 2 * pauli_Y),
         WaveFunctionTokens.OPERATOR,
     )
 
 
 def rz(theta: WaveFunctionElement):
     return WaveFunctionElement(
-        exponentiateMatrix(-1j * theta.data / 2 * pauli_Z),
+        exponentiate_matrix(-1j * theta.data / 2 * pauli_Z),
         WaveFunctionTokens.OPERATOR,
     )
 

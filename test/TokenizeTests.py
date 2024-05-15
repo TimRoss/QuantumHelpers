@@ -47,7 +47,7 @@ class TokenizeTests(unittest.TestCase):
         self.tokenizeCompare(testPsi=testPsi, expectedTokens=expectedTokens)
 
     def tokenizeCompare(self, testPsi, expectedTokens):
-        rtnArray = qh.tokenizeWaveFunctionString(testPsi)
+        rtnArray = qh.tokenize_wave_function_string(testPsi)
         self.assertEqual(
             len(rtnArray),
             len(expectedTokens),
