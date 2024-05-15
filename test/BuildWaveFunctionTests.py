@@ -112,4 +112,15 @@ class BuildWaveFunctionTests(unittest.TestCase):
             qh.eval("HH |00>")
         except:
             self.fail("Operators were probably not kroned first")
+
+    def test_insertingElements(self):
+        x_1 = qh.eval("XI")
+        psi = qh.eval("? |00>", x_1)
+        TestHelpers.compareMatricies(self, psi.data, qh.eval("XI |00>").data)
+
+    def test_insertingElements2(self):
+        x = qh.eval("X")
+        psi = qh.eval("?? |00>", x, x)
+        TestHelpers.compareMatricies(self, psi.data, qh.eval("XX |00>").data)
+        
         

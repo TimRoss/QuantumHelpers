@@ -630,7 +630,7 @@ def make_control_gate(control, target, gate, total_qubits):
 def tokenizeWaveFunctionString(stringstrong):
     # Tokenize a string
     # Characters to tokenize on: <, >, |, Capitol Letters, spaces
-    soloTokenPattern = r"^[\+*-,/()√π ]"
+    soloTokenPattern = r"^[\+*-,/()√π? ]"
     beginPattern = r"[<A-Z]"
     endPattern = r">"
     vert = "|"
@@ -679,9 +679,11 @@ def tokenizeWaveFunctionString(stringstrong):
     return tokens
 
 
-def eval(psi: str) -> WaveFunctionElement:
+def eval(psi: str, *insert_elements) -> WaveFunctionElement:
     tokens = tokenizeWaveFunctionString(psi)
-    return buildWaveFunction(tokens)
+    insert_elements_stack = list(insert_elements)
+    insert_elements_stack.reverse() # reverse so that elements can be popped off
+    return buildWaveFunction(tokens, insert_elements=insert_elements_stack)
 
 def getOperator(op: str) -> WaveFunctionElement:
     return WaveFunctionElement(operators[op], WaveFunctionTokens.OPERATOR)
@@ -692,7 +694,7 @@ def getScalar(s: str) -> WaveFunctionElement:
 def getArithmetic(a: str) -> WaveFunctionElement:
     return WaveFunctionElement(a, WaveFunctionTokens.ARITHMETIC)
 
-def buildWaveFunction(tokens, over_function: str = None):
+def buildWaveFunction(tokens:list, insert_elements:list = None, over_function: str = None):
     patterns = []
 
     patterns.append(("operator", r"^[A-Z][a-z]*", getOperator))
@@ -743,7 +745,7 @@ def buildWaveFunction(tokens, over_function: str = None):
                 if len(openParenStack) == 1 and over_function is not None:
                     # Evaluate from the previous comma to the comma, which will eval the argument
                     openingParenIndex = openParenStack.pop()
-                    arg = buildWaveFunction(tokens[openingParenIndex + 1 : i])
+                    arg = buildWaveFunction(tokens[openingParenIndex + 1 : i], insert_elements=insert_elements)
                     overallStack.append(arg)
                     openParenStack.append(i)
                     expected_args -= 1
@@ -757,7 +759,7 @@ def buildWaveFunction(tokens, over_function: str = None):
                 if len(openParenStack) == 0:
                     # Make a recursive call to this function to handle the stuff inside the parens
                     token_element = buildWaveFunction(
-                        tokens[openingParenIndex + 1 : i], current_function
+                        tokens[openingParenIndex + 1 : i], insert_elements=insert_elements, over_function= current_function
                     )
                     current_function = None
                 else:
@@ -770,6 +772,11 @@ def buildWaveFunction(tokens, over_function: str = None):
             # Keep track of the function, it will be put onto the stack after the args
             current_function = token
             token_handled = True
+        elif token == "?":
+            if len(insert_elements) == 0:
+                print("ERROR: Ran out of elements to insert")
+                return None
+            token_element = insert_elements.pop()
         elif token in knownScalars.keys():
             if DEBUG:
                 print("scalar")
