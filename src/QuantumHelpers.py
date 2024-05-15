@@ -265,12 +265,21 @@ class WaveFunctionElement:
             return
         plt.style.use("Solarize_Light2")
 
-        axs = plt.subplots(1, 2, layout="constrained", figsize=(10, 5))
+        num_qubits = int(np.log2(len(self.data)))
+        fig_height_per_qubit = 5
+        fig_width = 10
+        axs = plt.subplots(num_qubits, 2, layout="constrained", figsize=(fig_width, fig_height_per_qubit * num_qubits))
+        if num_qubits == 1:
+            self._add_state_plot(axs[1][0], 0, False)
+            self._add_state_plot(axs[1][1], 0, True)
+        else:
+            for qubit in range(num_qubits):
+                self._add_state_plot(axs[1][num_qubits - (qubit + 1)][0], qubit, False)
+                self._add_state_plot(axs[1][num_qubits - (qubit + 1)][1], qubit, True)
 
-        self._add_state_plot(axs[1][0], False)
-        self._add_state_plot(axs[1][1], True)
 
-    def _add_state_plot(self, ax, imag: bool):
+
+    def _add_state_plot(self, ax, qubit_index: int, imag: bool):
         if imag:
             x = self.data.imag
             title = "Imaginary"
@@ -311,18 +320,54 @@ class WaveFunctionElement:
         plt.plot([-2, 2], [-2, 2], "--", color="green")
 
         # Draw the actual state
-        arrow_head_length = np.sqrt(x[1] ** 2 + x[0] ** 2) * 0.1
-        plt.arrow(
-            0,
-            0,
-            x[1],
-            x[0],
-            color="blue",
-            width=0.02,
-            head_width=arrow_head_length,
-            head_length=arrow_head_length,
-            length_includes_head=True,
-        )
+        num_states = int(np.log2(len(self.data)))
+        i = -1
+        j = -1
+        overall_zero_part = 0
+        overall_one_part = 0
+        one_parts = []
+        zero_parts = []
+        for state in range(num_states):
+            i += 1
+            j += 1
+            if j == 2**qubit_index:
+                i += 2**qubit_index
+                j = 0
+            zero_part = self.data[i]
+            one_part = self.data[i + 2**qubit_index]
+            if imag:
+                zero_part = zero_part.imag
+                one_part = one_part.imag
+            else:
+                zero_part = zero_part.real
+                one_part = one_part.real
+            one_parts.append(one_part)
+            zero_parts.append(zero_part)
+            overall_one_part += one_part
+            overall_zero_part += zero_part
+        # normalize
+        norm_factor = np.sqrt(overall_one_part**2 + overall_zero_part**2)
+        if norm_factor > 0:
+            zero_parts = zero_parts / norm_factor
+            one_parts = one_parts / norm_factor
+        
+        overall_zero_part = 0
+        overall_one_part = 0
+        for state in range(num_states):
+            arrow_head_length = np.sqrt(one_parts[state] ** 2 + zero_parts[state] ** 2) * 0.1
+            plt.arrow(
+                overall_one_part,
+                overall_zero_part,
+                one_parts[state],
+                zero_parts[state],
+                color="blue",
+                width=0.02,
+                head_width=arrow_head_length,
+                head_length=arrow_head_length,
+                length_includes_head=True,
+            )
+            overall_one_part += one_parts[state]
+            overall_zero_part += zero_parts[state]
 
     def print(self):
         if self.type == WaveFunctionTokens.KET:
