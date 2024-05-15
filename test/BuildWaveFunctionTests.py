@@ -40,7 +40,7 @@ class BuildWaveFunctionTests(unittest.TestCase):
         TestHelpers.compareMatricies(self, rtn_psi.data, np.array([0, 1, 0, 0]))
 
     def test_BuildWaveFunctionBellState(self):
-        tokens = ["Cnot", "(", "H", "I", ")", "|00>"]
+        tokens = ["Cnot", "*", "H", "I", "|00>"]
         rtn_psi = qh.buildWaveFunction(tokens)
         TestHelpers.compareMatricies(
             self, rtn_psi.data, np.array([1 / np.sqrt(2), 0, 0, 1 / np.sqrt(2)])
@@ -105,3 +105,11 @@ class BuildWaveFunctionTests(unittest.TestCase):
         test_psi = qh.eval("Ctrl(1,2,X,2)")
         cnot = qh.eval("Cnot")
         TestHelpers.compareMatricies(self, test_psi.data , cnot.data)
+
+    def test_kronMatriciesFirst(self):
+        # Verify that operators will be kroned together instead of evaluating wavefunction from right to left
+        try:
+            qh.eval("HH |00>")
+        except:
+            self.fail("Operators were probably not kroned first")
+        

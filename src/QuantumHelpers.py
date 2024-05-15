@@ -611,7 +611,7 @@ def make_control_gate(control, target, gate, total_qubits):
 def tokenizeWaveFunctionString(stringstrong):
     # Tokenize a string
     # Characters to tokenize on: <, >, |, Capitol Letters, spaces
-    soloTokenPattern = r"^[+*-,/()√π ]"
+    soloTokenPattern = r"^[\+*-,/()√π ]"
     beginPattern = r"[<A-Z]"
     endPattern = r">"
     vert = "|"
@@ -664,21 +664,32 @@ def eval(psi: str) -> WaveFunctionElement:
     tokens = tokenizeWaveFunctionString(psi)
     return buildWaveFunction(tokens)
 
+def getOperator(op: str) -> WaveFunctionElement:
+    return WaveFunctionElement(operators[op], WaveFunctionTokens.OPERATOR)
+
+def getScalar(s: str) -> WaveFunctionElement:
+    return WaveFunctionElement(complex(s), WaveFunctionTokens.SCALAR)
+
+def getArithmetic(a: str) -> WaveFunctionElement:
+    return WaveFunctionElement(a, WaveFunctionTokens.ARITHMETIC)
 
 def buildWaveFunction(tokens, over_function: str = None):
-    operatorsPattern = r"^[A-Z][a-z]*"
-    braPattern = r"^\<[01]+\|"
-    ketPattern = r"^\|[01]+\>$"
-    scalarPattern = r"^[0-9.j]+$"
-    negScalarPattern = r"^-[0-9.j]+$"
+    patterns = []
+
+    patterns.append(("operator", r"^[A-Z][a-z]*", getOperator))
+    patterns.append(("ket", r"^\|[01]+\>$", buildKet))
+    patterns.append(("bra", r"^\<[01]+\|", buildBra))
+    patterns.append(("scalar", r"^[0-9.j]+$", getScalar))
+    patterns.append(("neg scalar", r"^-[0-9.j]+$", getScalar))
+    patterns.append(("arithmetic", r"^[+\-*/]$", getArithmetic))
     parenPattern = r"^[(,)]$"
-    endTermPattern = r"^[+-]$"
-    arithmeticPattern = r"^[*/√]$"
 
     openParenStack = []
     overallStack = []
     currentTermStack = []
 
+    token_element = None
+    prev_type = None
     current_function = None
     expected_args = 0
     if over_function is not None:
@@ -686,7 +697,7 @@ def buildWaveFunction(tokens, over_function: str = None):
             print(f"ERROR: Function {over_function} is not a known function.")
             return None
         expected_args = wavefunction_functions[over_function][0]
-        openParenStack.append(0)
+        openParenStack.append(-1)
 
     if DEBUG:
         print("building " + str(tokens))
@@ -696,24 +707,24 @@ def buildWaveFunction(tokens, over_function: str = None):
     # The order of these pattern matche matter because there are specific patterns
     # farther up that will also match more general patterns below.
     for i, token in enumerate(tokens):
+        token_handled = False # Once the current token is considered to be handled, this is set to true
         if re.search(parenPattern, token):
             if DEBUG:
                 print(f"paren {token}")
             if token == "(":
                 openParenStack.append(i)
-            if token == ",":
+                token_handled = True
+            elif token == ",":
                 # Only handle comma if at top level, which is when open paren stack has 1
                 if len(openParenStack) == 1 and over_function is not None:
                     # Evaluate from the previous comma to the comma, which will eval the argument
                     openingParenIndex = openParenStack.pop()
-                    # Just address first index
-                    if openingParenIndex == 0:
-                        openingParenIndex = -1
                     arg = buildWaveFunction(tokens[openingParenIndex + 1 : i])
                     overallStack.append(arg)
                     openParenStack.append(i)
                     expected_args -= 1
-            if token == ")":
+                token_handled = True
+            elif token == ")":
                 if len(openParenStack) == 0:
                     print("ERROR: Got a closing paren without a matching opening paren")
                     return None
@@ -721,73 +732,43 @@ def buildWaveFunction(tokens, over_function: str = None):
                 openingParenIndex = openParenStack.pop()
                 if len(openParenStack) == 0:
                     # Make a recursive call to this function to handle the stuff inside the parens
-                    element = buildWaveFunction(
+                    token_element = buildWaveFunction(
                         tokens[openingParenIndex + 1 : i], current_function
                     )
-                    currentTermStack.append(element)
                     current_function = None
+                else:
+                    token_handled = True
         elif len(openParenStack) > 0:
-            continue
+            token_handled = True
         elif token in wavefunction_functions:
             if DEBUG:
                 print("function")
             # Keep track of the function, it will be put onto the stack after the args
             current_function = token
+            token_handled = True
         elif token in knownScalars.keys():
             if DEBUG:
                 print("scalar")
-            currentTermStack.append(
-                WaveFunctionElement(knownScalars[token], WaveFunctionTokens.SCALAR)
-            )
-        elif re.search(arithmeticPattern, token):
-            if DEBUG:
-                print("arithmetic")
-            currentTermStack.append(
-                WaveFunctionElement(token, WaveFunctionTokens.ARITHMETIC)
-            )
-        elif re.search(operatorsPattern, token):
-            if DEBUG:
-                print("operator")
-            if token in operators:
-                currentTermStack.append(
-                    WaveFunctionElement(operators[token], WaveFunctionTokens.OPERATOR)
-                )
-            else:
-                print("ERROR: Unrecognized Operator: " + token)
-        elif re.search(ketPattern, token):
-            if DEBUG:
-                print("ket")
-            # buildKet function will return tuple with type
-            currentTermStack.append(buildKet(token))
-        elif re.search(braPattern, token):
-            if DEBUG:
-                print("bra")
-            # buildBra function will return tuple with type
-            currentTermStack.append(buildBra(token))
-        elif re.search(scalarPattern, token):
-            if DEBUG:
-                print("scalar")
-            currentTermStack.append(
-                WaveFunctionElement(complex(token), WaveFunctionTokens.SCALAR)
-            )
-        elif re.search(negScalarPattern, token):
-            if DEBUG:
-                print("neg scalar")
-            currentTermStack.append(
-                WaveFunctionElement(complex(token), WaveFunctionTokens.SCALAR)
-            )
-        elif re.search(endTermPattern, token):
-            if DEBUG:
-                print("end of term")
-            # Evaluate current term and put result into overall stack
+            token_element = WaveFunctionElement(knownScalars[token], WaveFunctionTokens.SCALAR)
+        else:
+            # Figure out token based on pattern
+            for pattern in patterns:
+                if re.search(pattern[1], token):
+                    if DEBUG:
+                        print(f"Identified {token} as {pattern[0]}")
+                    token_element = pattern[2](token)                    
+                    break
+        if token_handled:
+            continue
+        if token_element is None:
+            print(f"ERROR: token not recognized: {token}")
+            return None
+        if prev_type is not None and token_element.type != prev_type:
             overallStack.append(evaluateStack(currentTermStack))
             currentTermStack = []
-            # Put arithmetic onto overall stack
-            overallStack.append(
-                WaveFunctionElement(token, WaveFunctionTokens.ARITHMETIC)
-            )
-        else:
-            print("token not recognized: {token}".format(token=token))
+        currentTermStack.append(token_element)
+        prev_type = token_element.type
+
 
     # Evaluate the full stack and what is left over in the overall stack
     # overallStack.append(evaluateStack(currentTermStack))
@@ -798,8 +779,6 @@ def buildWaveFunction(tokens, over_function: str = None):
             )
         else:
             openingParenIndex = openParenStack.pop()
-            if openingParenIndex == 0:
-                openingParenIndex = -1
             overallStack.append(buildWaveFunction(tokens[openingParenIndex + 1 :]))
             overallStack.append(
                 WaveFunctionElement(over_function, WaveFunctionTokens.FUNCTION)
