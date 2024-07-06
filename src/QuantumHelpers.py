@@ -281,13 +281,6 @@ class WaveFunctionElement:
 
 
     def _add_state_plot(self, ax, qubit_index: int, imag: bool):
-        if imag:
-            x = self.data.imag
-            title = "Imaginary"
-        else:
-            x = self.data.real
-            title = "Real"
-
         # Center window around origin
         xlim = [-1.2, 1.2]
         ylim = [-1.2, 1.2]
@@ -322,7 +315,7 @@ class WaveFunctionElement:
 
         # Draw the actual state
         num_states = len(self.data)
-        colors = cm.rainbow(np.linspace(0, 1, num_states))
+        colors = self._get_colors_for_states()
         i = -1
         j = -1
         overall_zero_part = 0
@@ -375,6 +368,26 @@ class WaveFunctionElement:
             )
             overall_one_part += one_parts[state]
             overall_zero_part += zero_parts[state]
+
+    def _get_colors_for_states(self):
+        """
+        Get an array of color values matching the states to be drawn. 
+        Only chooses color values for non_zero states so that more distinct colors are chosen.
+
+        Return:
+            ndarray of color values. Shape is num_states x 4. The 4 values are RGBA
+        """
+        tolerance = 1e-8
+        non_zero_indexes = []
+        for i,state in enumerate(self.data):
+            if state > tolerance:
+                non_zero_indexes.append(i)
+        
+        colors = cm.rainbow(np.linspace(0, 1, len(non_zero_indexes)))
+        state_colors = np.full((len(self.data),4),(0.0,0.0,0.0,0.0))
+        for color_index, state_index in enumerate(non_zero_indexes):
+            state_colors[state_index] = colors[color_index]
+        return state_colors
 
     def print(self):
         if self.type == WaveFunctionTokens.KET:
