@@ -269,11 +269,16 @@ class WaveFunctionElement:
         num_qubits = int(np.log2(len(self.data)))
         fig_height_per_qubit = 5
         fig_width = 10
+
         axs = plt.subplots(num_qubits, 2, layout="constrained", figsize=(fig_width, fig_height_per_qubit * num_qubits))
         if num_qubits == 1:
+            axs[1][0].set_title("real")
+            axs[1][1].set_title("imaginary")
             self._add_state_plot(axs[1][0], 0, False)
             self._add_state_plot(axs[1][1], 0, True)
         else:
+            axs[1][0][0].set_title("real")
+            axs[1][0][1].set_title("imaginary")
             for qubit in range(num_qubits):
                 self._add_state_plot(axs[1][num_qubits - (qubit + 1)][0], qubit, False)
                 self._add_state_plot(axs[1][num_qubits - (qubit + 1)][1], qubit, True)
