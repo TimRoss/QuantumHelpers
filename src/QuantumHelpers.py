@@ -64,6 +64,7 @@ class WaveFunctionTokens(Enum):
     SCALAR = 4
     ARITHMETIC = 5
     FUNCTION = 6
+    ERROR = 7
 
 
 class WaveFunctionElement:
@@ -808,8 +809,10 @@ def build_wave_function(
     expected_args = 0
     if over_function is not None:
         if over_function not in wavefunction_functions:
-            print(f"ERROR: Function {over_function} is not a known function.")
-            return None
+            return WaveFunctionElement(
+                f"Function {over_function} is not a known function.",
+                WaveFunctionTokens.ERROR,
+            )
         expected_args = wavefunction_functions[over_function][0]
 
         # Add a paren onto the stack if we are evaluating the arguments for a function
@@ -844,8 +847,10 @@ def build_wave_function(
                 token_handled = True
             elif token == ")":
                 if len(open_paren_stack) == 0:
-                    print("ERROR: Got a closing paren without a matching opening paren")
-                    return None
+                    return WaveFunctionElement(
+                        "Got a closing paren without a matching opening paren",
+                        WaveFunctionTokens.ERROR,
+                    )
                 # Only handle the outermost parens, inner parens will be handled by the recursive call
                 opening_paren_index = open_paren_stack.pop()
                 if len(open_paren_stack) == 0:
@@ -868,8 +873,9 @@ def build_wave_function(
             token_handled = True
         elif token == "?":
             if len(insert_elements) == 0:
-                print("ERROR: Ran out of elements to insert")
-                return None
+                return WaveFunctionElement(
+                    "Ran out of elements to insert after ?", WaveFunctionTokens.ERROR
+                )
             token_element = insert_elements.pop()
         elif token in knownScalars.keys():
             if DEBUG:
@@ -889,8 +895,7 @@ def build_wave_function(
         if token_handled:
             continue
         if token_element is None:
-            print(f"ERROR: token not recognized: {token}")
-            return None
+            return WaveFunctionElement(f"Token not recognized: {token}")
         # If they type is changing from the last token, evaluate the current stack and then stick onto overall stack
         # This basically defines an order of operations by keeping similar types together
         if prev_type is not None and token_element.type != prev_type:
@@ -903,8 +908,9 @@ def build_wave_function(
     # overallStack.append(evaluateStack(currentTermStack))
     if over_function is not None:
         if expected_args != 1:
-            print(
-                f"ERROR: Incorrect number of arguments for {over_function}, expected {wavefunction_functions[over_function][0]}"
+            return WaveFunctionElement(
+                f"Incorrect number of arguments for {over_function}, expected {wavefunction_functions[over_function][0]}",
+                WaveFunctionTokens.ERROR,
             )
         else:
             opening_paren_index = open_paren_stack.pop()
@@ -913,8 +919,59 @@ def build_wave_function(
                 WaveFunctionElement(over_function, WaveFunctionTokens.FUNCTION)
             )
     if len(open_paren_stack) > 0:
-        print("ERROR: Unclosed parenthesis")
+        return WaveFunctionElement("Unclosed parenthesis", WaveFunctionTokens.ERROR)
     return evaluate_stack(overall_stack + current_term_stack)
+
+
+def evaluate_wavefunction_function(afunction_token, stack):
+    args = []
+    try:
+        for _ in range(wavefunction_functions[afunction_token.data][0]):
+            args.append(stack.pop())
+        args.reverse()
+        # Block below is where wavefunction function is actually called
+        function_result = None
+        try:
+            function_result = wavefunction_functions[afunction_token.data][1](
+                *args, atrigger_token=afunction_token.data
+            )
+        except TypeError:
+            # This may have happened because the function does not take a atrigger_token argument, try again without that.
+            try:
+                function_result = wavefunction_functions[afunction_token.data][1](*args)
+            except TypeError:
+                # Try again but this time with the data of each argument instead of WaveFunctionElement
+                # This will allow calling functions from other libararies
+                args = [a.data for a in args]
+                function_result = wavefunction_functions[afunction_token.data][1](*args)
+
+        if not isinstance(function_result, WaveFunctionElement):
+            if isinstance(function_result, np.ndarray):
+                if len(function_result.shape) == 1:
+                    function_result = WaveFunctionElement(
+                        function_result, WaveFunctionTokens.KET
+                    )
+                elif len(function_result.shape) == 2:
+                    function_result = WaveFunctionElement(
+                        function_result, WaveFunctionTokens.OPERATOR
+                    )
+            else:
+                try:
+                    function_result = WaveFunctionElement(
+                        complex(function_result), WaveFunctionTokens.SCALAR
+                    )
+                except Exception:
+                    function_result = WaveFunctionElement(
+                        "Could not turn function result into WaveFunctionElement. Function token: "
+                        + afunction_token.data,
+                        WaveFunctionTokens.ERROR,
+                    )
+
+        stack.append(function_result)
+    except Exception as e:
+        print("--- ERROR in function call triggered from {afunction_token} ---")
+        raise e
+
 
 
 def evaluate_stack(stack):
@@ -925,21 +982,7 @@ def evaluate_stack(stack):
     while len(stack) > 1:
         right = stack.pop()
         if right.type == WaveFunctionTokens.FUNCTION:
-            args = []
-            for i in range(wavefunction_functions[right.data][0]):
-                args.append(stack.pop())
-            args.reverse()
-            # Block below is where wavefunction function is actually called
-            function_result = None
-            try:
-                function_result = wavefunction_functions[right.data][1](
-                    *args, atrigger_token=right.data
-                )
-            except TypeError:
-                # This may have happened because the function does not take a atrigger_token argument, try again without that.
-                function_result = wavefunction_functions[right.data][1](*args)
-
-            stack.append(function_result)
+            evaluate_wavefunction_function(right, stack)
             continue
         left = stack.pop()
         arithmetic = None
@@ -1149,4 +1192,5 @@ wavefunction_functions = {
     "Ry": (1, ry),
     "Rz": (1, rz),
     "Ctrl": (4, make_control_gate_tokens),
+    "Abs": (1, np.abs),
 }
