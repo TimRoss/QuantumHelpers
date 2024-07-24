@@ -270,7 +270,12 @@ class WaveFunctionElement:
         fig_height_per_qubit = 5
         fig_width = 10
 
-        axs = plt.subplots(num_qubits, 2, layout="constrained", figsize=(fig_width, fig_height_per_qubit * num_qubits))
+        axs = plt.subplots(
+            num_qubits,
+            2,
+            layout="constrained",
+            figsize=(fig_width, fig_height_per_qubit * num_qubits),
+        )
         if num_qubits == 1:
             axs[1][0].set_title("real")
             axs[1][1].set_title("imaginary")
@@ -282,8 +287,6 @@ class WaveFunctionElement:
             for qubit in range(num_qubits):
                 self._add_state_plot(axs[1][num_qubits - (qubit + 1)][0], qubit, False)
                 self._add_state_plot(axs[1][num_qubits - (qubit + 1)][1], qubit, True)
-
-
 
     def _add_state_plot(self, ax, qubit_index: int, imag: bool):
         # Center window around origin
@@ -355,11 +358,13 @@ class WaveFunctionElement:
         if norm_factor > 0:
             zero_parts = zero_parts / norm_factor
             one_parts = one_parts / norm_factor
-        
+
         overall_zero_part = 0
         overall_one_part = 0
         for state in range(num_states // 2):
-            arrow_head_length = np.sqrt(one_parts[state] ** 2 + zero_parts[state] ** 2) * 0.1
+            arrow_head_length = (
+                np.sqrt(one_parts[state] ** 2 + zero_parts[state] ** 2) * 0.1
+            )
             plt.arrow(
                 overall_one_part,
                 overall_zero_part,
@@ -376,7 +381,7 @@ class WaveFunctionElement:
 
     def _get_colors_for_states(self):
         """
-        Get an array of color values matching the states to be drawn. 
+        Get an array of color values matching the states to be drawn.
         Only chooses color values for non_zero states so that more distinct colors are chosen.
 
         Return:
@@ -384,12 +389,12 @@ class WaveFunctionElement:
         """
         tolerance = 1e-8
         non_zero_indexes = []
-        for i,state in enumerate(self.data):
+        for i, state in enumerate(self.data):
             if state > tolerance:
                 non_zero_indexes.append(i)
-        
+
         colors = cm.rainbow(np.linspace(0, 1, len(non_zero_indexes)))
-        state_colors = np.full((len(self.data),4),(0.0,0.0,0.0,0.0))
+        state_colors = np.full((len(self.data), 4), (0.0, 0.0, 0.0, 0.0))
         for color_index, state_index in enumerate(non_zero_indexes):
             state_colors[state_index] = colors[color_index]
         return state_colors
@@ -412,7 +417,9 @@ def build_ket(a_ket: str) -> WaveFunctionElement:
     elif re.match(ketPattern, a_ket):
         ket_string = a_ket[1:-1]
     else:
-        print(f"Argument passed to buildKet does not match expected ket format. Got {a_ket}")
+        print(
+            f"Argument passed to buildKet does not match expected ket format. Got {a_ket}"
+        )
         return None
     local_ket = 1
     # Goes through each character from the argument excluding the start and end characters
@@ -434,7 +441,9 @@ def build_bra(a_bra: str) -> WaveFunctionElement:
     elif re.match(braPattern, a_bra):
         bra_string = a_bra[1:-1]
     else:
-        print(f"Argument passed to buildBra does not match expected bra format. Got {a_bra}")
+        print(
+            f"Argument passed to buildBra does not match expected bra format. Got {a_bra}"
+        )
         return None
     local_bra = 1
     # Goes through each character from the argument excluding the start and end characters
@@ -619,7 +628,9 @@ def pretty_wave_function_amplitude(n) -> str:
     if n.real < 0:
         numerator_string = "-" + numerator_string
 
-    return "{n}/{d}{c}".format(n=numerator_string, d=denominator_string, c=complex_string)
+    return "{n}/{d}{c}".format(
+        n=numerator_string, d=denominator_string, c=complex_string
+    )
 
 
 vPrettyWaveFunctionAmplitude = np.vectorize(pretty_wave_function_amplitude)
@@ -661,7 +672,9 @@ def pretty_fraction(n) -> str:
     if n < 0:
         numerator_string = "-" + numerator_string
 
-    return "{n}/{d}{c}".format(n=numerator_string, d=denominator_string, c=complex_string)
+    return "{n}/{d}{c}".format(
+        n=numerator_string, d=denominator_string, c=complex_string
+    )
 
 
 vPrettyFraction = np.vectorize(pretty_fraction)
@@ -697,11 +710,11 @@ def make_control_gate(control, target, gate, total_qubits):
 
 
 def tokenize_wave_function_string(stringstrong: str):
-    '''
+    """
     Tokenize the string passed in into tokens that can be converted into WaveFunctionElements
     Args:
         stringstrong (str): String to be tokenized. This string should represent a wavefunction.
-    '''
+    """
     solo_token_pattern = r"^[\+*-,/()√π? ]"
     begin_token_pattern = r"[<A-Z]"
     end_token_pattern = r">"
@@ -753,21 +766,28 @@ def tokenize_wave_function_string(stringstrong: str):
 def eval(psi: str, *insert_elements) -> WaveFunctionElement:
     tokens = tokenize_wave_function_string(psi)
     insert_elements_stack = list(insert_elements)
-    insert_elements_stack.reverse() # reverse so that elements can be popped off
+    insert_elements_stack.reverse()  # reverse so that elements can be popped off
     return build_wave_function(tokens, insert_elements=insert_elements_stack)
+
 
 def build_operator(op: str) -> WaveFunctionElement:
     return WaveFunctionElement(operators[op], WaveFunctionTokens.OPERATOR)
 
+
 def build_scalar(s: str) -> WaveFunctionElement:
     return WaveFunctionElement(complex(s), WaveFunctionTokens.SCALAR)
+
 
 def build_arithmetic(a: str) -> WaveFunctionElement:
     return WaveFunctionElement(a, WaveFunctionTokens.ARITHMETIC)
 
-def build_wave_function(tokens:list, insert_elements:list = None, over_function: str = None):
-    patterns = []
 
+def build_wave_function(
+    tokens: list, insert_elements: list = None, over_function: str = None
+):
+    # The order of these pattern matches matter because there are specific patterns
+    # farther up that will also match more general patterns below.
+    patterns = []
     patterns.append(("operator", r"^[A-Z][a-z]*", build_operator))
     patterns.append(("ket", ketPattern, build_ket))
     patterns.append(("ket", ketDecPattern, build_ket))
@@ -792,19 +812,17 @@ def build_wave_function(tokens:list, insert_elements:list = None, over_function:
             return None
         expected_args = wavefunction_functions[over_function][0]
 
-        # Add a paren onto the stack if this we are evaluating the arguments for a function
+        # Add a paren onto the stack if we are evaluating the arguments for a function
         # Each argument gets evaluated and placed on the stack individually
         open_paren_stack.append(-1)
 
     if DEBUG:
         print("building " + str(tokens))
 
-    # Figure out what type each token in and add it into the current term stack as a
+    # Figure out what type each token is and add it into the current term stack as a
     # as a QuantumElement
-    # The order of these pattern matche matter because there are specific patterns
-    # farther up that will also match more general patterns below.
     for i, token in enumerate(tokens):
-        token_handled = False # Once the current token is considered to be handled, this is set to true
+        token_handled = False  # Once the current token is considered to be handled, this is set to true
         if re.search(paren_pattern, token):
             if DEBUG:
                 print(f"paren {token}")
@@ -816,7 +834,10 @@ def build_wave_function(tokens:list, insert_elements:list = None, over_function:
                 if len(open_paren_stack) == 1 and over_function is not None:
                     # Evaluate from the previous comma to the comma, which will eval the argument
                     opening_paren_index = open_paren_stack.pop()
-                    arg = build_wave_function(tokens[opening_paren_index + 1 : i], insert_elements=insert_elements)
+                    arg = build_wave_function(
+                        tokens[opening_paren_index + 1 : i],
+                        insert_elements=insert_elements,
+                    )
                     overall_stack.append(arg)
                     open_paren_stack.append(i)
                     expected_args -= 1
@@ -830,7 +851,9 @@ def build_wave_function(tokens:list, insert_elements:list = None, over_function:
                 if len(open_paren_stack) == 0:
                     # Make a recursive call to this function to handle the stuff inside the parens
                     token_element = build_wave_function(
-                        tokens[opening_paren_index + 1 : i], insert_elements=insert_elements, over_function= current_function
+                        tokens[opening_paren_index + 1 : i],
+                        insert_elements=insert_elements,
+                        over_function=current_function,
                     )
                     current_function = None
                 else:
@@ -851,14 +874,16 @@ def build_wave_function(tokens:list, insert_elements:list = None, over_function:
         elif token in knownScalars.keys():
             if DEBUG:
                 print("scalar")
-            token_element = WaveFunctionElement(knownScalars[token], WaveFunctionTokens.SCALAR)
+            token_element = WaveFunctionElement(
+                knownScalars[token], WaveFunctionTokens.SCALAR
+            )
         else:
             # Figure out token based on pattern
             for pattern in patterns:
                 if re.search(pattern[1], token):
                     if DEBUG:
                         print(f"Identified {token} as {pattern[0]}")
-                    token_element = pattern[2](token)                    
+                    token_element = pattern[2](token)
                     break
         # Handle token by putting the token_element onto the stack.
         if token_handled:
@@ -873,7 +898,6 @@ def build_wave_function(tokens:list, insert_elements:list = None, over_function:
             current_term_stack = []
         current_term_stack.append(token_element)
         prev_type = token_element.type
-
 
     # Evaluate the full stack and what is left over in the overall stack
     # overallStack.append(evaluateStack(currentTermStack))
@@ -905,7 +929,17 @@ def evaluate_stack(stack):
             for i in range(wavefunction_functions[right.data][0]):
                 args.append(stack.pop())
             args.reverse()
-            stack.append(wavefunction_functions[right.data][1](*args))
+            # Block below is where wavefunction function is actually called
+            function_result = None
+            try:
+                function_result = wavefunction_functions[right.data][1](
+                    *args, atrigger_token=right.data
+                )
+            except TypeError:
+                # This may have happened because the function does not take a atrigger_token argument, try again without that.
+                function_result = wavefunction_functions[right.data][1](*args)
+
+            stack.append(function_result)
             continue
         left = stack.pop()
         arithmetic = None
@@ -968,19 +1002,63 @@ def exponentiate_matrix(a):
     return eigenvectors @ tmp @ np.linalg.inv(eigenvectors)
 
 
-def make_control_gate_tokens(acontrol: int, atarget: int, agate, atotal_qubits: int):
+def print_error(msg: str):
+    print(f"ERROR: {msg}")
+
+
+def make_control_gate_tokens(
+    acontrol: WaveFunctionElement,
+    atarget: WaveFunctionElement,
+    agate: WaveFunctionElement,
+    atotal_qubits: WaveFunctionElement,
+    atrigger_token: str = None,
+) -> WaveFunctionElement:
     """
-    Make a control gate where the gate passed in is a matrix.
+    Make a control gate where the gate passed in is an operator
+
+    Usage:
+        Ctrl(int, int, operator, int)
+        Ex. Ctrl(1,2,X,3)
+            Creates a 3-qubit controlled X-gate with qubit 1 as the control bit,
+              qubit 2 as the target, and nothing happening to the third qubit.
 
     Args:
-        control (int): position of control qubit (1-indexed)
-        target (int): position of target qubit (1-indexed)
-        gate (np.ndarray): Matrix representation of 1-qubit operator to use on target bit
-        totalQubits (int): total number of qubits in circuit
+        control (WaveFunctionElement): Scalar - position of control qubit (1-indexed)
+        target (WaveFunctionElement): Scalar - position of target qubit (1-indexed)
+        gate (WaveFunctionElement): Operator - Matrix representation of 1-qubit operator to use on target bit
+        totalQubits (WaveFunctionElement): Scalar - total number of qubits for control gate
 
     Return:
         QuantumElement: Operator for the control gate
     """
+    help_msg = "See Ctrl function documentation for usage by using help(make_control_gate_tokens)"
+    trigger_msg = (
+        f"Triggered from {atrigger_token} function --\n"
+        if atrigger_token is not None
+        else None
+    )
+    # Verify arguments
+    if (
+        acontrol.type != WaveFunctionTokens.SCALAR
+        or atarget.type != WaveFunctionTokens.SCALAR
+        or agate.type != WaveFunctionTokens.OPERATOR
+        or atotal_qubits.type != WaveFunctionTokens.SCALAR
+    ):
+        print_error(f"{trigger_msg} Invalid arguments for Ctrl function. \n {help_msg}")
+        print(f"HERE: {acontrol.type} {atarget.type} {agate.type} {atotal_qubits.type}")
+    if acontrol.data == 0 or atarget.data == 0 or atotal_qubits.data == 0:
+        print_error(
+            f"{trigger_msg} Qubit index arguments for Ctrl function are 1-indexed. 0 is not valid. \n {help_msg}"
+        )
+
+    if (
+        acontrol.data.real > atotal_qubits.data.real
+        or atarget.data.real > atotal_qubits.data.real
+    ):
+        print_error(
+            f"{trigger_msg} Control and Targets qubits must be less than or equal to total qubits."
+        )
+
     control = int(acontrol.data.real)
     target = int(atarget.data.real)
     gate = agate.data
@@ -998,11 +1076,12 @@ def make_control_gate_tokens(acontrol: int, atarget: int, agate, atotal_qubits: 
             control_arr.append(np.eye(2))
             target_arr.append(np.eye(2))
     return WaveFunctionElement(
-        chained_kron(control_arr) + chained_kron(target_arr), WaveFunctionTokens.OPERATOR
+        chained_kron(control_arr) + chained_kron(target_arr),
+        WaveFunctionTokens.OPERATOR,
     )
 
 
-def sqrt(a: WaveFunctionElement):
+def sqrt(a: WaveFunctionElement, atrigger_token: str = None):
     return WaveFunctionElement(np.sqrt(a.data), a.type)
 
 
@@ -1035,7 +1114,7 @@ def prob(a: WaveFunctionElement):
     return WaveFunctionElement(a.data * np.conj(a.data), WaveFunctionTokens.SCALAR)
 
 
-# Supported function. Key is the string representation of the function, the first letter must be capitol, and the rest lowercase.
+# Supported functions. Key is the string representation of the function, the first letter must be capitol, and the rest lowercase.
 # The value is a tuple with the left being the number of arguments and the right the function that evaluates it.
 wavefunction_functions = {
     "√": (1, sqrt),
