@@ -1082,36 +1082,60 @@ def make_control_gate_tokens(
 
 
 def sqrt(a: WaveFunctionElement, atrigger_token: str = None):
-    return WaveFunctionElement(np.sqrt(a.data), a.type)
+    try:
+        return WaveFunctionElement(np.sqrt(a.data), a.type)
+    except Exception as e:
+        print(f"Triggered from {atrigger_token} \n")
+        raise e
 
 
-def exponentiate_matrix_wv(a: WaveFunctionElement):
-    return WaveFunctionElement(exponentiate_matrix(a.data), a.type)
+def exponentiate_matrix_wv(a: WaveFunctionElement, atrigger_token: str = None):
+    try:
+        return WaveFunctionElement(exponentiate_matrix(a.data), a.type)
+    except Exception as e:
+        print(f"Triggered from {atrigger_token} \n")
+        raise e
 
 
-def rx(theta: WaveFunctionElement):
-    return WaveFunctionElement(
-        exponentiate_matrix(-1j * theta.data / 2 * pauli_X),
-        WaveFunctionTokens.OPERATOR,
-    )
+def rx(theta: WaveFunctionElement, atrigger_token: str = None):
+    try:
+        return WaveFunctionElement(
+            exponentiate_matrix(-1j * theta.data / 2 * pauli_X),
+            WaveFunctionTokens.OPERATOR,
+        )
+    except Exception as e:
+        print(f"Triggered from {atrigger_token} \n")
+        raise e
 
 
-def ry(theta: WaveFunctionElement):
-    return WaveFunctionElement(
-        exponentiate_matrix(-1j * theta.data / 2 * pauli_Y),
-        WaveFunctionTokens.OPERATOR,
-    )
+def ry(theta: WaveFunctionElement, atrigger_token: str = None):
+    try:
+        return WaveFunctionElement(
+            exponentiate_matrix(-1j * theta.data / 2 * pauli_Y),
+            WaveFunctionTokens.OPERATOR,
+        )
+    except Exception as e:
+        print(f"Triggered from {atrigger_token} \n")
+        raise e
 
 
-def rz(theta: WaveFunctionElement):
-    return WaveFunctionElement(
-        exponentiate_matrix(-1j * theta.data / 2 * pauli_Z),
-        WaveFunctionTokens.OPERATOR,
-    )
+def rz(theta: WaveFunctionElement, atrigger_token: str = None):
+    try:
+        return WaveFunctionElement(
+            exponentiate_matrix(-1j * theta.data / 2 * pauli_Z),
+            WaveFunctionTokens.OPERATOR,
+        )
+    except Exception as e:
+        print(f"Triggered from {atrigger_token} \n")
+        raise e
 
 
-def prob(a: WaveFunctionElement):
-    return WaveFunctionElement(a.data * np.conj(a.data), WaveFunctionTokens.SCALAR)
+def prob(a: WaveFunctionElement, atrigger_token: str = None):
+    try:
+        return WaveFunctionElement(a.data * np.conj(a.data), WaveFunctionTokens.SCALAR)
+    except Exception as e:
+        print(f"Triggered from {atrigger_token} \n")
+        raise e
 
 
 # Supported functions. Key is the string representation of the function, the first letter must be capitol, and the rest lowercase.
