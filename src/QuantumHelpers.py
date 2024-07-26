@@ -72,10 +72,15 @@ class WaveFunctionElement:
 
     data = []
     type: WaveFunctionTokens
+    token: str
 
-    def __init__(self, data, type: WaveFunctionTokens) -> None:
+    def __init__(self, data, type: WaveFunctionTokens, token: str = None) -> None:
         self.data = data
         self.type = type
+        self.token = token
+
+        if self.token == WaveFunctionTokens.ERROR:
+            self.print()
 
     def __add__(self, other):
         """
@@ -87,7 +92,7 @@ class WaveFunctionElement:
         if self.type == other.type:
             return WaveFunctionElement(self.data + other.data, self.type)
         else:
-            self.print_error(other, "add")
+            return self.handle_error(other, "add", "+")
 
     def __sub__(self, other):
         """
@@ -200,6 +205,23 @@ class WaveFunctionElement:
         else:
             self.print_error(other, "kron")
 
+    def handle_error(self, other, operation_name, operation_symbol):
+        if self.type == WaveFunctionTokens.ERROR:
+            return self
+        elif other.type == WaveFunctionTokens.ERROR:
+            return other
+        else:
+            errstr = "Wavefunction elements being added must have the same type.\n"
+            if self.token is not None and other.token is not None:
+                errstr += f"ISSUE: {self.token} {operation_symbol} {other.token}\n"
+            errstr += (
+                f"\tCannot {operation_name} {self.type.name} and {other.type.name}"
+            )
+            return WaveFunctionElement(
+                errstr,
+                WaveFunctionTokens.ERROR,
+            )
+
     def print_error(self, other, operation):
         """
         Print an error to stdout in a standardized way.
@@ -239,6 +261,8 @@ class WaveFunctionElement:
             case WaveFunctionTokens.SCALAR:
                 return str(pretty_wave_function_amplitude(self.data)).replace("'", "")
             case WaveFunctionTokens.ARITHMETIC:
+                return self.data
+            case WaveFunctionTokens.ERROR:
                 return self.data
             case _:
                 return "Type: {type} to string not implemented".format(type=type)
@@ -403,6 +427,8 @@ class WaveFunctionElement:
     def print(self):
         if self.type == WaveFunctionTokens.KET:
             print_states(self.data)
+        elif self.type == WaveFunctionTokens.ERROR:
+            print(self.data)
 
 
 def build_ket(a_ket: str) -> WaveFunctionElement:
@@ -426,7 +452,7 @@ def build_ket(a_ket: str) -> WaveFunctionElement:
     # Goes through each character from the argument excluding the start and end characters
     for i in ket_string:
         local_ket = np.kron(local_ket, unitKets[int(i)])
-    return WaveFunctionElement(local_ket, WaveFunctionTokens.KET)
+    return WaveFunctionElement(local_ket, WaveFunctionTokens.KET, a_ket)
 
 
 def build_bra(a_bra: str) -> WaveFunctionElement:
@@ -450,7 +476,7 @@ def build_bra(a_bra: str) -> WaveFunctionElement:
     # Goes through each character from the argument excluding the start and end characters
     for i in bra_string:
         local_bra = np.kron(local_bra, unitKets[int(i)])
-    return WaveFunctionElement(local_bra, WaveFunctionTokens.BRA)
+    return WaveFunctionElement(local_bra, WaveFunctionTokens.BRA, a_bra)
 
 
 def print_states(a_ket):
@@ -772,15 +798,15 @@ def eval(psi: str, *insert_elements) -> WaveFunctionElement:
 
 
 def build_operator(op: str) -> WaveFunctionElement:
-    return WaveFunctionElement(operators[op], WaveFunctionTokens.OPERATOR)
+    return WaveFunctionElement(operators[op], WaveFunctionTokens.OPERATOR, op)
 
 
 def build_scalar(s: str) -> WaveFunctionElement:
-    return WaveFunctionElement(complex(s), WaveFunctionTokens.SCALAR)
+    return WaveFunctionElement(complex(s), WaveFunctionTokens.SCALAR, s)
 
 
 def build_arithmetic(a: str) -> WaveFunctionElement:
-    return WaveFunctionElement(a, WaveFunctionTokens.ARITHMETIC)
+    return WaveFunctionElement(a, WaveFunctionTokens.ARITHMETIC, a)
 
 
 def build_wave_function(
@@ -812,6 +838,7 @@ def build_wave_function(
             return WaveFunctionElement(
                 f"Function {over_function} is not a known function.",
                 WaveFunctionTokens.ERROR,
+                over_function,
             )
         expected_args = wavefunction_functions[over_function][0]
 
@@ -850,6 +877,7 @@ def build_wave_function(
                     return WaveFunctionElement(
                         "Got a closing paren without a matching opening paren",
                         WaveFunctionTokens.ERROR,
+                        ")",
                     )
                 # Only handle the outermost parens, inner parens will be handled by the recursive call
                 opening_paren_index = open_paren_stack.pop()
@@ -881,7 +909,7 @@ def build_wave_function(
             if DEBUG:
                 print("scalar")
             token_element = WaveFunctionElement(
-                knownScalars[token], WaveFunctionTokens.SCALAR
+                knownScalars[token], WaveFunctionTokens.SCALAR, token
             )
         else:
             # Figure out token based on pattern
@@ -895,7 +923,9 @@ def build_wave_function(
         if token_handled:
             continue
         if token_element is None:
-            return WaveFunctionElement(f"Token not recognized: {token}")
+            return WaveFunctionElement(
+                f"Token not recognized: {token}", WaveFunctionTokens.ERROR, token
+            )
         # If they type is changing from the last token, evaluate the current stack and then stick onto overall stack
         # This basically defines an order of operations by keeping similar types together
         if prev_type is not None and token_element.type != prev_type:
@@ -911,15 +941,20 @@ def build_wave_function(
             return WaveFunctionElement(
                 f"Incorrect number of arguments for {over_function}, expected {wavefunction_functions[over_function][0]}",
                 WaveFunctionTokens.ERROR,
+                over_function,
             )
         else:
             opening_paren_index = open_paren_stack.pop()
             overall_stack.append(build_wave_function(tokens[opening_paren_index + 1 :]))
             overall_stack.append(
-                WaveFunctionElement(over_function, WaveFunctionTokens.FUNCTION)
+                WaveFunctionElement(
+                    over_function, WaveFunctionTokens.FUNCTION, over_function
+                )
             )
     if len(open_paren_stack) > 0:
-        return WaveFunctionElement("Unclosed parenthesis", WaveFunctionTokens.ERROR)
+        return WaveFunctionElement(
+            "Unclosed parenthesis", WaveFunctionTokens.ERROR, "("
+        )
     return evaluate_stack(overall_stack + current_term_stack)
 
 
@@ -949,27 +984,32 @@ def evaluate_wavefunction_function(afunction_token, stack):
             if isinstance(function_result, np.ndarray):
                 if len(function_result.shape) == 1:
                     function_result = WaveFunctionElement(
-                        function_result, WaveFunctionTokens.KET
+                        function_result, WaveFunctionTokens.KET, afunction_token.data
                     )
                 elif len(function_result.shape) == 2:
                     function_result = WaveFunctionElement(
-                        function_result, WaveFunctionTokens.OPERATOR
+                        function_result,
+                        WaveFunctionTokens.OPERATOR,
+                        afunction_token.data,
                     )
             else:
                 try:
                     function_result = WaveFunctionElement(
-                        complex(function_result), WaveFunctionTokens.SCALAR
+                        complex(function_result),
+                        WaveFunctionTokens.SCALAR,
+                        afunction_token.data,
                     )
                 except Exception:
                     function_result = WaveFunctionElement(
                         "Could not turn function result into WaveFunctionElement. Function token: "
                         + afunction_token.data,
                         WaveFunctionTokens.ERROR,
+                        afunction_token.data,
                     )
 
         stack.append(function_result)
     except Exception as e:
-        print("--- ERROR in function call triggered from {afunction_token} ---")
+        print(f"--- ERROR in function call triggered from {afunction_token} ---")
         raise e
 
 
@@ -1129,6 +1169,7 @@ def sqrt(a: WaveFunctionElement, atrigger_token: str = None):
 
 def exponentiate_matrix_wv(a: WaveFunctionElement, atrigger_token: str = None):
     return WaveFunctionElement(exponentiate_matrix(a.data), a.type)
+
 
 def rx(theta: WaveFunctionElement, atrigger_token: str = None):
     return WaveFunctionElement(
