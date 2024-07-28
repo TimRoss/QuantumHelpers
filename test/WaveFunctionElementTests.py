@@ -39,7 +39,7 @@ class QuantumElementTests(unittest.TestCase):
             np.array([[1, 0], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x + y
-        self.assertEqual(z, None)
+        self.assertEqual(z.type, qh.WaveFunctionTokens.ERROR)
 
     def test_QESubBraBra(self):
         x = qh.WaveFunctionElement(np.array([1, 0]), qh.WaveFunctionTokens.BRA)
@@ -72,7 +72,7 @@ class QuantumElementTests(unittest.TestCase):
             np.array([[1, 0], [0, 1]]), qh.WaveFunctionTokens.OPERATOR
         )
         z = x - y
-        self.assertEqual(z, None)
+        self.assertEqual(z.type, qh.WaveFunctionTokens.ERROR)
 
     def test_QEMulOpFloat(self):
         x = qh.WaveFunctionElement(

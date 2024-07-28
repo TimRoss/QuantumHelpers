@@ -1,8 +1,8 @@
 import numpy as np
 import re
 import numbers
-import unittest
 from enum import Enum
+from colorama import Style, Fore
 
 
 # Figure out if matplotlib is installed. If not, plotting is not available
@@ -79,7 +79,8 @@ class WaveFunctionElement:
         self.type = type
         self.token = token
 
-        if self.token == WaveFunctionTokens.ERROR:
+        if self.type == WaveFunctionTokens.ERROR:
+            self.data = Fore.RED + "ERROR:\t" + Fore.RESET + self.data
             self.print()
 
     def __add__(self, other):
@@ -104,7 +105,7 @@ class WaveFunctionElement:
         if self.type == other.type:
             return WaveFunctionElement(self.data - other.data, self.type)
         else:
-            self.print_error(other, "subtract")
+            return self.handle_error(other, "subtract", "-")
 
     def __mul__(self, other):
         """
@@ -168,9 +169,9 @@ class WaveFunctionElement:
                             self.data @ other.data, WaveFunctionTokens.OPERATOR
                         )
                     case _:
-                        return self.print_error(other, "multiply")
+                        return self.handle_error(other, "multiply", "*")
             case _:
-                return self.print_error(other, "multiply")
+                return self.handle_error(other, "multiply", "*")
 
     def __truediv__(self, other):
         """
@@ -211,7 +212,7 @@ class WaveFunctionElement:
         elif other.type == WaveFunctionTokens.ERROR:
             return other
         else:
-            errstr = "Wavefunction elements being added must have the same type.\n"
+            errstr = ""
             if self.token is not None and other.token is not None:
                 errstr += f"ISSUE: {self.token} {operation_symbol} {other.token}\n"
             errstr += (
