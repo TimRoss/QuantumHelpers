@@ -202,32 +202,42 @@ class WaveFunctionElement:
                     case WaveFunctionTokens.BRA:
                         return self & other
                     case WaveFunctionTokens.KET:
+                        if self.data.shape[0] != other.data.shape[0]:
+                            return self.handle_error(other, "multiply", "*", ErrorTypes.SHAPE_ERROR)
                         return WaveFunctionElement(
                             np.inner(self.data, other.data), WaveFunctionTokens.SCALAR
                         )
                     case WaveFunctionTokens.OPERATOR:
+                        if self.data.shape[0] != other.data.shape[1]:
+                            return self.handle_error(other, "multiply", "*", ErrorTypes.SHAPE_ERROR)
                         return WaveFunctionElement(
                             self.data @ other.data, WaveFunctionTokens.BRA
                         )
                     case _:
-                        return self.print_error(other, "multiply")
+                        return self.handle_error(other, "multiply", "*", ErrorTypes.TYPE_ERROR)
             case WaveFunctionTokens.KET:
                 match other.type:
                     case WaveFunctionTokens.BRA:
+                        if self.data.shape[0] != other.data.shape[0]:
+                            return self.handle_error(other, "multiply", "*", ErrorTypes.SHAPE_ERROR)
                         return WaveFunctionElement(
                             np.outer(self.data, other.data), WaveFunctionTokens.OPERATOR
                         )
                     case WaveFunctionTokens.KET:
                         return self & other
                     case _:
-                        return self.print_error(other, "multiply")
+                        return self.handle_error(other, "multiply", "*", ErrorTypes.TYPE_ERROR)
             case WaveFunctionTokens.OPERATOR:
                 match other.type:
                     case WaveFunctionTokens.KET:
+                        if self.data.shape[0] != other.data.shape[0]:
+                            return self.handle_error(other, "multiply", "*", ErrorTypes.SHAPE_ERROR)
                         return WaveFunctionElement(
                             self.data @ other.data, WaveFunctionTokens.KET
                         )
                     case WaveFunctionTokens.OPERATOR:
+                        if self.data.shape[1] != other.data.shape[0]:
+                            return self.handle_error(other, "multiply", "*", ErrorTypes.SHAPE_ERROR)
                         return WaveFunctionElement(
                             self.data @ other.data, WaveFunctionTokens.OPERATOR
                         )
@@ -286,7 +296,7 @@ class WaveFunctionElement:
                 )
             case ErrorTypes.SHAPE_ERROR:
                 errstr += (
-                    f"\t Cannot {operation_name} shape {self.data.shape} and {self.data.shape}"
+                    f"\t Cannot {operation_name} shape {self.data.shape} and {other.data.shape}"
                 )
         return WaveFunctionElement(
             errstr,
