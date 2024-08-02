@@ -54,6 +54,9 @@ braPattern = r"^\<[01]+\|"
 ketDecPattern = r"^\|[1-9]d\d+\>$"
 braDecPattern = r"^\<[1-9]d\d+\|"
 
+class ErrorTypes(Enum):
+    TYPE_ERROR = 1
+    SHAPE_ERROR = 2
 
 class WaveFunctionTokens(Enum):
     """Types of tokens for the wavefunction tokens. These will determine the interactions between different elements."""
@@ -149,9 +152,11 @@ class WaveFunctionElement:
             return self.print_not_supported()
 
         if self.type == other.type:
+            if self.data.shape[0] != other.data.shape[0]:
+                return self.handle_error(other, "add", "+", ErrorTypes.SHAPE_ERROR)
             return WaveFunctionElement(self.data + other.data, self.type)
         else:
-            return self.handle_error(other, "add", "+")
+            return self.handle_error(other, "add", "+", ErrorTypes.TYPE_ERROR)
 
     def __sub__(self, other):
         """
@@ -163,7 +168,7 @@ class WaveFunctionElement:
         if self.type == other.type:
             return WaveFunctionElement(self.data - other.data, self.type)
         else:
-            return self.handle_error(other, "subtract", "-")
+            return self.handle_error(other, "subtract", "-", ErrorTypes.TYPE_ERROR)
 
     def __mul__(self, other):
         """
@@ -227,9 +232,9 @@ class WaveFunctionElement:
                             self.data @ other.data, WaveFunctionTokens.OPERATOR
                         )
                     case _:
-                        return self.handle_error(other, "multiply", "*")
+                        return self.handle_error(other, "multiply", "*", ErrorTypes.TYPE_ERROR)
             case _:
-                return self.handle_error(other, "multiply", "*")
+                return self.handle_error(other, "multiply", "*", ErrorTypes.TYPE_ERROR)
 
     def __truediv__(self, other):
         """
@@ -264,22 +269,29 @@ class WaveFunctionElement:
         else:
             self.print_error(other, "kron")
 
-    def handle_error(self, other, operation_name, operation_symbol):
+    def handle_error(self, other, operation_name: str, operation_symbol: str, error_type: ErrorTypes):
         if self.type == WaveFunctionTokens.ERROR:
             return self
         elif other.type == WaveFunctionTokens.ERROR:
             return other
-        else:
-            errstr = ""
-            if self.token is not None and other.token is not None:
-                errstr += f"ISSUE: {self.token} {operation_symbol} {other.token}\n"
-            errstr += (
-                f"\tCannot {operation_name} {self.type.name} and {other.type.name}"
-            )
-            return WaveFunctionElement(
-                errstr,
-                WaveFunctionTokens.ERROR,
-            )
+    
+        errstr = ""
+        if self.token is not None and other.token is not None:
+            errstr += f"ISSUE: {self.token} {operation_symbol} {other.token}\n"
+
+        match error_type:
+            case ErrorTypes.TYPE_ERROR:
+                errstr += (
+                    f"\tCannot {operation_name} {self.type.name} and {other.type.name}"
+                )
+            case ErrorTypes.SHAPE_ERROR:
+                errstr += (
+                    f"\t Cannot {operation_name} shape {self.data.shape} and {self.data.shape}"
+                )
+        return WaveFunctionElement(
+            errstr,
+            WaveFunctionTokens.ERROR,
+        )
 
     def print_error(self, other, operation):
         """
@@ -503,10 +515,7 @@ def build_ket(a_ket: str) -> WaveFunctionElement:
     elif re.match(ketPattern, a_ket):
         ket_string = a_ket[1:-1]
     else:
-        print(
-            f"Argument passed to buildKet does not match expected ket format. Got {a_ket}"
-        )
-        return None
+        return WaveFunctionElement("Argument passed to buildKet does not match expected ket format.", WaveFunctionTokens.ERROR, token=a_ket)
     local_ket = 1
     # Goes through each character from the argument excluding the start and end characters
     for i in ket_string:
@@ -527,10 +536,7 @@ def build_bra(a_bra: str) -> WaveFunctionElement:
     elif re.match(braPattern, a_bra):
         bra_string = a_bra[1:-1]
     else:
-        print(
-            f"Argument passed to buildBra does not match expected bra format. Got {a_bra}"
-        )
-        return None
+        return WaveFunctionElement("Argument passed to buildBra does not match expected bra format.", WaveFunctionTokens.ERROR, token=a_bra)
     local_bra = 1
     # Goes through each character from the argument excluding the start and end characters
     for i in bra_string:
@@ -552,7 +558,7 @@ def print_states(a_ket):
 
 
 def to_string(a_ket):
-    if type(a_ket) == tuple:
+    if isinstance(a_ket, tuple):
         match a_ket.type:
             case WaveFunctionTokens.SCALAR:
                 return str(a_ket.data)
@@ -640,8 +646,8 @@ def find_fraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, 
         if numerator != 0:
             break
         for numer in reversed(range(1, denom)):
-            distanceFromInt = ((p / numer) * denom) % 1
-            if distanceFromInt < tolerance or (1 - distanceFromInt) < tolerance:
+            distance_from_int = ((p / numer) * denom) % 1
+            if distance_from_int < tolerance or (1 - distance_from_int) < tolerance:
                 if np.abs((numer / denom) - p) < tolerance:
                     numerator = numer
                     denominator = denom
