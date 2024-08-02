@@ -122,5 +122,31 @@ class BuildWaveFunctionTests(unittest.TestCase):
         x = qh.eval("X")
         psi = qh.eval("?? |00>", x, x)
         TestHelpers.compareMatricies(self, psi.data, qh.eval("XX |00>").data)
+    
+    def test_validKet(self):
+        x = qh.eval("|0>")
+        self.assertTrue(x.valid)
+
+    def test_invalidKets(self):
+        bad_type = qh.WaveFunctionElement([1,0], qh.WaveFunctionTokens.KET)
+        self.assertFalse(bad_type.valid)
+        bad_length = qh.WaveFunctionElement(np.array([1,0,0]), qh.WaveFunctionTokens.KET)
+        self.assertFalse(bad_length.valid)
+        bad_dimensions = qh.WaveFunctionElement(np.array([[1,0],[1,0]]), qh.WaveFunctionTokens.KET)
+        self.assertFalse(bad_dimensions.valid)
+
+    def test_validOperator(self):
+        x = qh.eval("H")
+        self.assertTrue(x.valid)
+
+    def test_invalidOperators(self):
+        bad_type = qh.WaveFunctionElement([1,0], qh.WaveFunctionTokens.OPERATOR)
+        self.assertFalse(bad_type.valid)
+        bad_length = qh.WaveFunctionElement(np.array([[1,0,0],[1,0,0]]), qh.WaveFunctionTokens.OPERATOR)
+        self.assertFalse(bad_length.valid)
+        non_square = qh.WaveFunctionElement(np.array([[1,0],[1,0],[1,0],[1,0]]), qh.WaveFunctionTokens.OPERATOR)
+        self.assertFalse(non_square.valid)
+        bad_dimensions = qh.WaveFunctionElement(np.array([1,0]), qh.WaveFunctionTokens.OPERATOR)
+        self.assertFalse(bad_dimensions.valid)
         
         

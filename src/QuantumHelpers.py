@@ -73,6 +73,7 @@ class WaveFunctionElement:
     data = []
     type: WaveFunctionTokens
     token: str
+    valid: bool
 
     def __init__(self, data, type: WaveFunctionTokens, token: str = None) -> None:
         self.data = data
@@ -90,27 +91,54 @@ class WaveFunctionElement:
                 self.__validate_ket__()
             case WaveFunctionTokens.OPERATOR:
                 self.__validate_operator__()
+            case _:
+                self.valid = True
 
     def __validate_ket__(self):
         if not isinstance(self.data, np.ndarray):
             print(
-                "INVALID: Ket data expected to be a numpy array, but is: "
-                + type(self.data)
+                f"INVALID: Ket/Bra data expected to be a numpy array, but is: {type(self.data)}"
             )
+            self.valid = False
             return
         num_dimensions = len(self.data.shape)
         if num_dimensions != 1:
             print(
-                f"INVALID: Ket data expected to be 1-dimensional, got {num_dimensions} dimension(s)"
+                f"INVALID: Ket/Bra data expected to be 1-dimensional, got {num_dimensions} dimension(s)"
             )
+            self.valid = False
             return
         num_states = self.data.shape[0]
         if not is_power_of_2_x01(num_states):
             print(f"INVALID: Expected a number of states to be a power of 2, got {num_states} states / elements in data array.")
+            self.valid = False
             return
+        self.valid = True
         
     def __validate_operator__(self):
-        return
+        if not isinstance(self.data, np.ndarray):
+            print(
+                f"INVALID: Operator data expected to be a numpy array, but is: {type(self.data)}"
+            )
+            self.valid = False
+            return
+        num_dimensions = len(self.data.shape)
+        if num_dimensions != 2:
+            print(
+                f"INVALID: Operator data expected to be 2-dimensional, got {num_dimensions} dimension(s)"
+            )
+            self.valid = False
+            return
+        if self.data.shape[0] != self.data.shape[1]:
+            print(f"INVALID: Operator expected to be a square array, but is {self.data.shape}")
+            self.valid = False
+            return
+        num_states = self.data.shape[0]
+        if not is_power_of_2_x01(num_states):
+            print(f"INVALID: Expected a number of states to be a power of 2, got {num_states} states.")
+            self.valid = False
+            return
+        self.valid = True
 
 
     def __add__(self, other):
