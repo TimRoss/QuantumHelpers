@@ -281,3 +281,11 @@ class OtherTests(unittest.TestCase):
         TestHelpers.compareMatricies(self, result1.data, np.array([0,1,0,0]))
         TestHelpers.compareMatricies(self, result2.data, np.array([0,0,1,0]))
         TestHelpers.compareMatricies(self, result3.data, np.array([0,0,0,1]))
+
+    def test_isPower2(self):
+        power_2s = [2,4,8,16,32,64,128]
+        not_power_2s = [0,1,3,5,6,7,9,10,11,12,13,14,15]
+        for n in power_2s:
+            self.assertTrue(qh.is_power_of_2_x01(n))
+        for n in not_power_2s:
+            self.assertFalse(qh.is_power_of_2_x01(n))

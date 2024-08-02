@@ -99,11 +99,19 @@ class WaveFunctionElement:
             )
             return
         num_dimensions = len(self.data.shape)
-        if num_dimensions != 2:
+        if num_dimensions != 1:
             print(
-                "INVALID: Ket data expected to be 2-dimensional, got {num_dimensions} dimension(s)"
+                f"INVALID: Ket data expected to be 1-dimensional, got {num_dimensions} dimension(s)"
             )
-        x, y = self.data.shape
+            return
+        num_states = self.data.shape[0]
+        if not is_power_of_2_x01(num_states):
+            print(f"INVALID: Expected a number of states to be a power of 2, got {num_states} states / elements in data array.")
+            return
+        
+    def __validate_operator__(self):
+        return
+
 
     def __add__(self, other):
         """
@@ -294,13 +302,13 @@ class WaveFunctionElement:
         """
         Return a hermetian conjugate of the element.
         """
-        newType = self.type
+        new_type = self.type
         if self.type == WaveFunctionTokens.BRA:
-            newType = WaveFunctionTokens.KET
+            new_type = WaveFunctionTokens.KET
         elif self.type == WaveFunctionTokens.KET:
-            newType = WaveFunctionTokens.BRA
+            new_type = WaveFunctionTokens.BRA
 
-        return WaveFunctionElement(np.conj(np.transpose(self.data)), newType)
+        return WaveFunctionElement(np.conj(np.transpose(self.data)), new_type)
 
     def draw(self):
         """
@@ -1217,6 +1225,17 @@ def rz(theta: WaveFunctionElement, atrigger_token: str = None):
 
 def prob(a: WaveFunctionElement, atrigger_token: str = None):
     return WaveFunctionElement(a.data * np.conj(a.data), WaveFunctionTokens.SCALAR)
+
+def is_power_of_2_x01(n: int):
+    '''
+    Determines if an integer is a power of 2, but 0 and 1 are not considered powers of 2 because they are not valid ket sizes.
+
+    Return:
+        True if the number is a power of 2, False if not or 1 or 0
+    '''
+    if n == 0 or n == 1:
+        return False
+    return (n & (n - 1)) == 0
 
 
 # Supported functions. Key is the string representation of the function, the first letter must be capitol, and the rest lowercase.
