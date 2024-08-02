@@ -83,6 +83,28 @@ class WaveFunctionElement:
             self.data = Fore.RED + "ERROR:\t" + Fore.RESET + self.data
             self.print()
 
+        match self.type:
+            case WaveFunctionTokens.BRA:
+                self.__validate_ket__()
+            case WaveFunctionTokens.KET:
+                self.__validate_ket__()
+            case WaveFunctionTokens.OPERATOR:
+                self.__validate_operator__()
+
+    def __validate_ket__(self):
+        if not isinstance(self.data, np.ndarray):
+            print(
+                "INVALID: Ket data expected to be a numpy array, but is: "
+                + type(self.data)
+            )
+            return
+        num_dimensions = len(self.data.shape)
+        if num_dimensions != 2:
+            print(
+                "INVALID: Ket data expected to be 2-dimensional, got {num_dimensions} dimension(s)"
+            )
+        x, y = self.data.shape
+
     def __add__(self, other):
         """
         Overloaded + : Add 2 elements together. Elements must be of the same type.
