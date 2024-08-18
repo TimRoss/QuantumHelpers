@@ -366,6 +366,8 @@ class WaveFunctionElement:
 
         prettified_op = vPrettyWaveFunctionAmplitude(self.data)
         elements_per_row = len(prettified_op[0])
+        
+        # Find longest element, which will be used for the length of all elements
         max_element_length = 0
         for x in prettified_op:
             for y in x:
@@ -399,6 +401,15 @@ class WaveFunctionElement:
             new_type = WaveFunctionTokens.BRA
 
         return WaveFunctionElement(np.conj(np.transpose(self.data)), new_type)
+    
+    def density(self):
+        """
+        Return a density matrix made from the state. Must be a Ket.
+        """
+        if self.type != WaveFunctionTokens.KET:
+            return WaveFunctionElement("Cannot make a density matrix out of something that is not a ket.", WaveFunctionTokens.ERROR)
+    
+        return self * self.dagger()
 
     def draw(self):
         """
