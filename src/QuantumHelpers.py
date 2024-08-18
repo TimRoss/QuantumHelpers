@@ -1239,12 +1239,8 @@ def make_control_gate_tokens(
     Return:
         QuantumElement: Operator for the control gate
     """
-    help_msg = "See Ctrl function documentation for usage by using help(make_control_gate_tokens)"
-    trigger_msg = (
-        f"Triggered from {atrigger_token} function --\n"
-        if atrigger_token is not None
-        else None
-    )
+    function_token = "Ctrl"
+    help_msg = f"See {function_token} function documentation for usage by using function_help({function_token})"
     # Verify arguments
     if (
         acontrol.type != WaveFunctionTokens.SCALAR
@@ -1252,20 +1248,15 @@ def make_control_gate_tokens(
         or agate.type != WaveFunctionTokens.OPERATOR
         or atotal_qubits.type != WaveFunctionTokens.SCALAR
     ):
-        print_error(f"{trigger_msg} Invalid arguments for Ctrl function. \n {help_msg}")
-        print(f"HERE: {acontrol.type} {atarget.type} {agate.type} {atotal_qubits.type}")
+        return WaveFunctionElement(f"Invalid arguments for {function_token} function. {help_msg}", WaveFunctionTokens.ERROR, token=atrigger_token)
     if acontrol.data == 0 or atarget.data == 0 or atotal_qubits.data == 0:
-        print_error(
-            f"{trigger_msg} Qubit index arguments for Ctrl function are 1-indexed. 0 is not valid. \n {help_msg}"
-        )
+        return WaveFunctionElement(f"Index out of range for {function_token} function. Qubit index arguments are 1-indexed, 0 is not valid. {help_msg}", WaveFunctionTokens.ERROR, token=atrigger_token)
 
     if (
         acontrol.data.real > atotal_qubits.data.real
         or atarget.data.real > atotal_qubits.data.real
     ):
-        print_error(
-            f"{trigger_msg} Control and Targets qubits must be less than or equal to total qubits."
-        )
+        return WaveFunctionElement(f"Invalid arguments for {function_token} function. Control and Target qubits must be less than or equal to total qubits. {help_msg}", WaveFunctionTokens.ERROR, token=atrigger_token)
 
     control = int(acontrol.data.real)
     target = int(atarget.data.real)
@@ -1332,6 +1323,15 @@ def is_power_of_2_x01(n: int):
         return False
     return (n & (n - 1)) == 0
 
+def function_help(atoken: str = None) -> None:
+    if atoken is None or atoken not in wavefunction_functions.keys():
+        help_str = "Available functions: \n"
+        for key in wavefunction_functions.keys:
+            help_str += key + "\n"
+        print(help_str)
+        return
+    
+    help(wavefunction_functions.get(atoken)[1])
 
 # Supported functions. Key is the string representation of the function, the first letter must be capitol, and the rest lowercase.
 # The value is a tuple with the left being the number of arguments and the right the function that evaluates it.
