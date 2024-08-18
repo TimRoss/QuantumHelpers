@@ -1,6 +1,7 @@
 import numpy as np
 import re
 import numbers
+import math
 from enum import Enum
 from colorama import Style, Fore
 
@@ -351,7 +352,7 @@ class WaveFunctionElement:
                     )
                 ).replace("'", "")
             case WaveFunctionTokens.OPERATOR:
-                return str(vPrettyWaveFunctionAmplitude(self.data)).replace("'", "")
+                return self._operator_to_string()
             case WaveFunctionTokens.SCALAR:
                 return str(pretty_wave_function_amplitude(self.data)).replace("'", "")
             case WaveFunctionTokens.ARITHMETIC:
@@ -360,6 +361,32 @@ class WaveFunctionElement:
                 return self.data
             case _:
                 return "Type: {type} to string not implemented".format(type=type)
+            
+    def _operator_to_string(self):
+
+        prettified_op = vPrettyWaveFunctionAmplitude(self.data)
+        elements_per_row = len(prettified_op[0])
+        max_element_length = 0
+        for x in prettified_op:
+            for y in x:
+                #print(f"Checking {y}")
+                if len(y) > max_element_length:
+                    max_element_length = len(y)
+
+        # Add padding between elements
+        max_element_length += 1
+        
+        op_string = ' _' + (" " * ((elements_per_row * max_element_length) - 2)) + '_\n' 
+        for x in prettified_op:
+            op_string += '|'
+            for y in x:
+                op_string += math.floor((max_element_length - len(y)) / 2) * " "
+                op_string += y
+                op_string += math.ceil((max_element_length - len(y)) / 2) * " "
+            op_string += '|\n'
+        op_string += '¯¯' + (" " * ((elements_per_row * max_element_length) - 2)) + '¯¯'
+
+        return op_string
 
     def dagger(self):
         """
