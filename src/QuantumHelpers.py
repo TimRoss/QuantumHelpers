@@ -536,6 +536,22 @@ class WaveFunctionElement:
             overall_one_part += one_parts[state]
             overall_zero_part += zero_parts[state]
 
+    def plot_as_waveform(self):
+        if not plottingAvailable:
+            print("Plotting not available. Make sure matplotlib is installed.")
+            return
+        plt.style.use("Solarize_Light2")
+        wavefunction_probabilities = np.abs(self.data.real**2 + self.data.imag**2)
+        x = np.arange(0, len(self.data))
+        y = np.transpose(wavefunction_probabilities)
+
+        fy = np.fft.fft(wavefunction_probabilities).real
+        axs = plt.subplots(2)
+
+        axs[1][0].plot(x, y, linewidth=2.0)
+        axs[1][1].plot(x, fy, linewidth=2.0)
+        plt.show()
+
     def _get_colors_for_states(self):
         """
         Get an array of color values matching the states to be drawn.
@@ -675,10 +691,10 @@ def chained_kron(a_list_to_kron):
 
 
 def find_fraction(n: float | complex) -> tuple[int, int] | tuple[int, int, int, int]:
-    max_denominator = 16
+    max_denominator = 100
     tolerance = 1e-8
 
-    is_complex = True if type(n) == complex else False
+    is_complex = isinstance(n, complex)
     is_negative = False
 
     # Local variables to keep track of return values

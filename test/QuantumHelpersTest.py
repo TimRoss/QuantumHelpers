@@ -65,6 +65,7 @@ class OtherTests(unittest.TestCase):
         self.assertEqual("0", qh.pretty_fraction(0))
         self.assertEqual("0", qh.pretty_fraction(0 + 0j))
         self.assertEqual("1/3", qh.pretty_fraction(1 / 3))
+        self.assertEqual("1/8", qh.pretty_fraction(1 / 8))
         self.assertEqual("1/10", qh.pretty_fraction(1 / 10))
 
     def test_printPrettyWaveFunctionAmplitude(self):
